@@ -1194,6 +1194,93 @@ const serveStatic = async (pathname: string) => {
   }
 };
 
+/**
+ * 微信公众号 IP 白名单检测。
+ *
+ * 微信所有需要 access_token 的接口（含 draft/add 创建草稿）都会校验调用方 IP，
+ * 不在白名单时统一返回 errcode 40164，且 errmsg 里带着**微信侧看到的那个 IP**。
+ *
+ * 为什么不用本机自测出口 IP（如 ipify）：实测两者并不一致
+ * （本机查到 161.118.247.247，微信看到 120.239.70.0，中间有代理/VPN）。
+ * 真正要加进白名单的是微信报错里的那个地址，所以这里直连微信反查。
+ */
+type WeixinIpCheck = {
+  ok: boolean;
+  reason: "ok" | "ip-not-whitelisted" | "missing-credentials" | "error";
+  /** 微信侧看到的调用方 IP（仅 ip-not-whitelisted 时能拿到） */
+  ip?: string;
+  errcode?: number;
+  errmsg?: string;
+  checkedAt: number;
+};
+
+/** errmsg 形如：invalid ip 120.239.70.0 ipv6 ::ffff:120.239.70.0, not in whitelist */
+const WEIXIN_INVALID_IP_PATTERN = /invalid ip\s+([0-9a-fA-F:.]+)/i;
+
+/** 避免每次刷新页面都去打微信 token 接口（该接口有每日调用上限） */
+const WEIXIN_IP_CHECK_TTL_MS = 60_000;
+let weixinIpCheckCache: { at: number; value: WeixinIpCheck } | null = null;
+
+const checkWeixinIpWhitelist = async (
+  force = false,
+): Promise<WeixinIpCheck> => {
+  if (
+    !force && weixinIpCheckCache &&
+    Date.now() - weixinIpCheckCache.at < WEIXIN_IP_CHECK_TTL_MS
+  ) {
+    return weixinIpCheckCache.value;
+  }
+
+  const checkedAt = Date.now();
+  const remember = (value: WeixinIpCheck): WeixinIpCheck => {
+    weixinIpCheckCache = { at: Date.now(), value };
+    return value;
+  };
+
+  const manager = ConfigManager.getInstance();
+  const appId = await manager.get("WEIXIN_APP_ID");
+  const appSecret = await manager.get("WEIXIN_APP_SECRET");
+  if (!appId || !appSecret) {
+    return remember({ ok: false, reason: "missing-credentials", checkedAt });
+  }
+
+  try {
+    const resp = await fetch(
+      `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appId}&secret=${appSecret}`,
+    );
+    const data = await resp.json();
+    if (!data.errcode) {
+      return remember({ ok: true, reason: "ok", checkedAt });
+    }
+    const errmsg = String(data.errmsg ?? "");
+    const matched = errmsg.match(WEIXIN_INVALID_IP_PATTERN);
+    if (Number(data.errcode) === 40164 && matched) {
+      return remember({
+        ok: false,
+        reason: "ip-not-whitelisted",
+        ip: matched[1],
+        errcode: 40164,
+        errmsg,
+        checkedAt,
+      });
+    }
+    return remember({
+      ok: false,
+      reason: "error",
+      errcode: Number(data.errcode) || undefined,
+      errmsg,
+      checkedAt,
+    });
+  } catch (error) {
+    return remember({
+      ok: false,
+      reason: "error",
+      errmsg: error instanceof Error ? error.message : String(error),
+      checkedAt,
+    });
+  }
+};
+
 const startUiServer = () => {
   const port = Number(Deno.env.get("UI_PORT") || 8002);
   Deno.serve({ port }, async (request) => {
@@ -1201,6 +1288,10 @@ const startUiServer = () => {
     if (url.pathname === "/api/overview") {
       const data = await buildOverview();
       return jsonResponse(data);
+    }
+    if (url.pathname === "/api/weixin/ip-check") {
+      const force = url.searchParams.get("force") === "1";
+      return jsonResponse(await checkWeixinIpWhitelist(force));
     }
     if (url.pathname === "/api/workflows/run") {
       if (request.method !== "POST") {

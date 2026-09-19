@@ -581,6 +581,83 @@
         background: rgba(244, 114, 182, 0.2);
         color: #f472b6;
       }
+
+      /*
+       * IP 白名单警告横幅
+       * 微信所有需要 access_token 的接口（含创建草稿 draft/add）都会校验调用方 IP，
+       * 不在白名单时统一返回 errcode 40164，此时发布必定失败。
+       */
+      .ip-warning {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        padding: 15px 17px;
+        margin-bottom: 16px;
+        border-radius: 16px;
+        background: rgba(244, 114, 182, 0.09);
+        border: 1px solid rgba(244, 114, 182, 0.45);
+      }
+
+      .ip-warning[hidden] {
+        display: none;
+      }
+
+      .ip-warning-icon {
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: rgba(244, 114, 182, 0.22);
+        color: #f472b6;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .ip-warning-body {
+        flex: 1;
+        min-width: 0;
+        display: grid;
+        gap: 7px;
+      }
+
+      .ip-warning-body strong {
+        font-size: 14px;
+        color: #ffd9ea;
+      }
+
+      .ip-warning-body p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+
+      .ip-warning-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .ip-warning-row code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+        padding: 8px 13px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        color: #ffe7b0;
+        user-select: all;
+      }
+
+      .ip-warning-row a.ghost-btn {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+      }
     </style>
   </head>
   <body>
@@ -613,15 +690,40 @@
             <button class="run-btn" id="run-publish" type="button">立即发布</button>
           </div>
         </div>
+        <div class="ip-warning" id="ip-warning" hidden>
+          <div class="ip-warning-icon">!</div>
+          <div class="ip-warning-body">
+            <strong>当前 IP 不在公众号白名单 —— 此时发布必定失败</strong>
+            <p>
+              微信接口拒绝了本机请求（errcode 40164）。公众号所有需要 access_token 的接口
+              （包括创建草稿）都会校验调用方 IP，必须先把下面这个 IP 加入白名单。
+            </p>
+            <div class="ip-warning-row">
+              <code id="ip-value">—</code>
+              <button class="ghost-btn" id="ip-copy" type="button">复制 IP</button>
+              <button class="ghost-btn" id="ip-recheck" type="button">重新检测</button>
+              <a
+                class="ghost-btn"
+                href="https://mp.weixin.qq.com/"
+                target="_blank"
+                rel="noopener"
+              >打开公众号后台</a>
+            </div>
+            <p>
+              路径：设置与开发 → 基本配置 → IP 白名单。
+              注意：家庭宽带的出口 IP 会变，变了需要重新添加。
+            </p>
+          </div>
+        </div>
         <div class="panel platforms">
           <div class="panel-title">
             <h3>平台状态</h3>
-            <span class="pill">已连接</span>
+            <span class="pill" id="platform-pill">检测中</span>
           </div>
           <div class="platform-grid">
             <div class="platform-card">
               <h4>微信公众号</h4>
-              <p>AppID 已绑定 · 草稿箱可用</p>
+              <p id="weixin-status-text">正在检测…</p>
             </div>
             <div class="platform-card">
               <h4>知乎</h4>
@@ -1001,6 +1103,93 @@
           draftModal.classList.remove("show");
         }
       });
+
+      /* ---------- 微信 IP 白名单检测（发布前置条件）---------- */
+      const ipWarning = document.getElementById("ip-warning");
+      const ipValue = document.getElementById("ip-value");
+      const ipCopyButton = document.getElementById("ip-copy");
+      const ipRecheckButton = document.getElementById("ip-recheck");
+      const weixinStatusText = document.getElementById("weixin-status-text");
+      const platformPill = document.getElementById("platform-pill");
+
+      const setPlatformPill = (text) => {
+        if (platformPill) {
+          platformPill.textContent = text;
+        }
+      };
+
+      const checkWeixinIp = async (force = false) => {
+        try {
+          const response = await fetch(
+            `/api/weixin/ip-check${force ? "?force=1" : ""}`,
+          );
+          if (!response.ok) {
+            return;
+          }
+          const data = await response.json();
+
+          if (data.ok) {
+            ipWarning?.setAttribute("hidden", "");
+            if (weixinStatusText) {
+              weixinStatusText.textContent =
+                "AppID 已绑定 · IP 白名单已通过 · 草稿箱可用";
+            }
+            setPlatformPill("已连接");
+            return;
+          }
+
+          if (data.reason === "ip-not-whitelisted") {
+            if (ipValue) {
+              ipValue.textContent = data.ip || "未识别";
+            }
+            if (weixinStatusText) {
+              weixinStatusText.textContent =
+                "AppID 已绑定 · ⚠ IP 未加白名单，发布会失败";
+            }
+            ipWarning?.removeAttribute("hidden");
+            setPlatformPill("微信待配置");
+            return;
+          }
+
+          if (data.reason === "missing-credentials") {
+            if (weixinStatusText) {
+              weixinStatusText.textContent = "未配置 WEIXIN_APP_ID / APP_SECRET";
+            }
+            setPlatformPill("微信未配置");
+            return;
+          }
+
+          if (weixinStatusText) {
+            weixinStatusText.textContent = `微信接口异常：${data.errmsg || "未知错误"}`;
+          }
+          setPlatformPill("微信异常");
+        } catch {
+          if (weixinStatusText) {
+            weixinStatusText.textContent = "微信状态检测失败";
+          }
+          setPlatformPill("检测失败");
+        }
+      };
+
+      ipCopyButton?.addEventListener("click", async () => {
+        const ip = (ipValue?.textContent || "").trim();
+        if (!ip || ip === "—") {
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(ip);
+          showToast("IP 已复制到剪贴板", "success");
+        } catch {
+          showToast("复制失败，请手动选中该 IP 复制", "error");
+        }
+      });
+
+      ipRecheckButton?.addEventListener("click", () => {
+        showToast("正在重新检测微信白名单…", "info");
+        checkWeixinIp(true);
+      });
+
+      checkWeixinIp();
       loadDrafts();
 
       const applyStored = (key, fallback) => {
