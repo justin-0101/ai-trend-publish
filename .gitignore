@@ -49,3 +49,11 @@ Thumbs.db
 *.tmp
 *.msi
 *.iso
+# Zhipu API key temp file (must NEVER be committed)
+.zhipu_key.*
+
+# Font build scratch space (full-size originals + downloads, ~114MB)
+.font-tmp/
+
+# Scratch test scripts
+.*.tmp.ts

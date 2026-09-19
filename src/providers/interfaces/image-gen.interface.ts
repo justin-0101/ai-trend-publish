@@ -35,7 +35,8 @@ export type ImageGeneratorType =
   | "TEXT_LOGO"
   | "PDD920_LOGO"
   | "ALIWANX21"
-  | "ALIWANX_POSTER";
+  | "ALIWANX_POSTER"
+  | "ZHIPU_COGVIEW4";
 
 /**
  * 图片生成器类型映射
@@ -47,4 +48,6 @@ export interface ImageGeneratorTypeMap {
     import("../image-gen/aliyun/aliwanx2.1.image.ts").AliWanX21ImageGenerator;
   "ALIWANX_POSTER":
     import("../image-gen/aliyun/aliwanx-poster.image-generator.ts").AliyunWanxPosterGenerator;
+  "ZHIPU_COGVIEW4":
+    import("../image-gen/zhipu-cogview4.image.ts").ZhipuCogView4ImageGenerator;
 }

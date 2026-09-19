@@ -77,6 +77,16 @@ AI_CONTENT_RANKER_LLM_PROVIDER="DEEPSEEK"
 AI_SUMMARIZER_LLM_PROVIDER="DEEPSEEK"
 ```
 
+### 封面图生成配置（智谱 cogview-4）
+
+```
+# 智谱开放平台 API Key（Bearer 鉴权），到 https://open.bigmodel.cn 申请
+# 用来调用 cogView-4-250304 生成科技感封面图（0.06 元/次）
+ZHIPU_API_KEY="your_zhipu_api_key"
+```
+
+如果不配置 `ZHIPU_API_KEY` 或调用失败，封面生成会回退到本地渐变 PNG（无文字）再上传；本地生成也失败则继续无封面出稿。
+
 ### 数据存储配置
 
 ```

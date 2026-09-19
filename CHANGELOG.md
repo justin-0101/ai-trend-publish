@@ -1,5 +1,78 @@
 # 更新日志
 
+## [未发布] - 2026-09-20
+
+### 封面图改为「AI 底图 + 本地字体重排」（解决 AI 直出中文乱码）
+
+**问题**：原先封面由文生图模型直接生成整张图（包含标题文字）。实测智谱 cogview-4 渲染中文严重乱码——
+「AI 三连炸」被画成「AI三连如人」，日期画成 2027/9/20，还凭空冒出「4P+」「#001IEF」等无意义字符。
+根因：扩散模型把文字当**像素图案**画，不是排版，中文几乎必然出错。
+
+另外智谱返回的 HTTP header 标 `image/png`，实际字节是 JPEG；且 1440×720 输出约 117KB，
+超过微信 `thumb` 素材 64KB 的硬性上限。
+
+**改法**：拆成两步，各用其所长。
+
+1. 智谱 cogview-4 只负责生成**无文字**的科技感底图
+   （prompt 明确要求 `no text, no letters, no words, no numbers, no logo, no signature`）
+2. 标题由字体引擎（imagescript WASM 字体库）**本地渲染**后叠加 —— 100% 准确
+
+**新增文件**
+
+- `src/utils/image/cover-composer.ts`
+  - `composeCover()`：背景（AI 底图 / 本地渐变）+ 三层中文标题 → 自适应暗底板 → 压缩到 <64KB JPEG
+  - `splitCoverTitle()`：草稿标题拆三层
+    （`2026/9/17 AI速递 | AI 三连炸：GPT-6 Astra 赋能 Devin，…` → 页脚 / 主标题 / 次标题）
+  - 字号按可用宽度自动缩放；长标题按标点断行，不会把单词切成半截
+  - 输出质量逐档下调（92→20），仍超 64KB 再按比例缩尺寸，确保符合微信 thumb 限制
+  - 字体字节进程内缓存，同一进程只读一次磁盘
+- `src/providers/image-gen/zhipu-cogview4.image.ts`
+  - 智谱 `cogView-4-250304` 生成器（`0.06 元/张`），Bearer 鉴权，输出 1440×720
+  - `buildTechCoverPrompt()`：只描述**底图**，明确禁止任何文字
+- `assets/fonts/`：12 款中文字体（**全部 SIL OFL-1.1，可商用、可随软件分发**）
+  - 用 `pyftsubset` 子集化为「通用规范汉字表 8105 字 + ASCII + 常用标点」
+  - 体积 114.4MB → **34.0MB**；渲染耗时从最慢 221s 降到 **0.4–1.2s**
+  - 来源、版本、子集化参数、合规说明见 `assets/fonts/README.md`
+
+**改动文件**
+
+- `src/providers/interfaces/image-gen.interface.ts`：新增 `ZHIPU_COGVIEW4` 类型与映射
+- `src/providers/image-gen/image-generator-factory.ts`：新增 `ZHIPU_COGVIEW4` 分支
+- `src/index.ts`：`publishDraftById` 封面三级降级
+  1. 智谱底图 + 本地标题 → 上传
+  2. 智谱失败 → 本地渐变底图 + 本地标题（标题依然正确，只是底图朴素）
+  3. 连本地合成都失败 → 无封面出稿
+- `ENV_CONFIGURATION.md`：补 `ZHIPU_API_KEY` 说明
+- `.gitignore`：忽略字体构建中间目录 `.font-tmp/`、临时探针脚本、智谱 key 临时文件
+
+**顺带修的 bug**
+
+- `publishDraftById` 原先调用 `publisher.publish(draft.html)` **不传 title**，
+  导致微信草稿标题落到默认值「每日AI趋势」、封面丢失。现已传 `{title, author, thumbMediaId}`。
+- `DraftItem` 新增可选 `thumbMediaId` 字段，发布成功后写回 `logs/drafts.json`，同一条草稿二次发布不再重复扣费。
+
+**水印处理**
+
+智谱在底图右下角强制叠加圆角药丸水印「AI生成」（非 prompt 可控，服务域名里就带 `watermark`）。
+实测水印包围盒：x 1308–1422 / y 663–712（1440×720 底图），**距下边仅 8px**。
+
+因此 `composeCover()` 提供 `watermark` 参数（默认 `crop`）：
+
+| 取值 | 做法 | 效果 |
+|---|---|---|
+| `crop`（默认） | 合成前从底图底部裁掉 64px 再铺满画布 | 水印彻底消失、无痕迹；代价是丢弃底部 8% 画面 |
+| `footer` | 保留整图，底部压 13% 高的不透光页脚带（带青色装饰线 + 可自定义品牌文字） | 水印被盖住，顺带变成品牌位；代价是底部一条硬边 |
+| `none` | 不处理 | 仅用于对比 |
+
+相关可调参数：`watermarkCropPx`（默认 64）、`footerText`。
+
+**已知限制**
+
+- `watermark=crop` 会丢弃底图底部约 8% 画面（对城市/场景图影响很小，实测无可见劣化）
+- 字体子集化只覆盖《通用规范汉字表》8105 字，表外生僻字会渲染为空白；扩容方法见 `assets/fonts/README.md`
+- 本次只改 `publishDraftById`（手动「立即发布」路径）；
+  `weixin-article` / `weixin-hellogithub` / `weixin-aibench` 三个工作流仍走 `ALIWANX_POSTER`，未接智谱
+
 ## [未发布] - 2026-09-17
 
 ### 封面图失败降级（不再让第三方图片服务拖垮工作流）

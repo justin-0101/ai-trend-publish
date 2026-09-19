@@ -9,6 +9,15 @@ import { WeixinArticleTemplateRenderer } from "@src/modules/render/article.rende
 import { HelloGithubTemplateRenderer } from "@src/modules/render/hellogithub.renderer.ts";
 import { AIBenchTemplateRenderer } from "@src/modules/render/aibench.renderer.ts";
 import { WeixinPublisher } from "@src/modules/publishers/weixin.publisher.ts";
+import {
+  composeCover,
+  splitCoverTitle,
+} from "@src/utils/image/cover-composer.ts";
+import { ImageGeneratorFactory } from "@src/providers/image-gen/image-generator-factory.ts";
+import {
+  buildTechCoverPrompt,
+  ZhipuCogView4ImageGenerator,
+} from "@src/providers/image-gen/zhipu-cogview4.image.ts";
 import { ConfigManager } from "@src/utils/config/config-manager.ts";
 import { Logger, LogLevel } from "@zilla/logger";
 import { join, extname } from "https://deno.land/std/path/mod.ts";
@@ -345,6 +354,7 @@ type DraftItem = {
   workflowType: string;
   title: string;
   html: string;
+  thumbMediaId?: string;
   status: DraftStatus;
   createdAt: number;
   updatedAt: number;
@@ -454,10 +464,85 @@ const publishDraftById = async (id: string) => {
   }
   const draft = drafts[index];
   const publisher = new WeixinPublisher();
-  const result = await publisher.publish(draft.html);
+  const author = Deno.env.get("AUTHOR") || "AI春长";
+  let thumbMediaId = draft.thumbMediaId;
+  // 草稿没记录封面 ID 时，自动生成封面（三级降级）：
+  //   1) 智谱 cogview-4 出**无文字**科技感底图 → 本地叠中文标题 → 压到 <64KB → 上传
+  //   2) 智谱失败 → 本地渐变底图 + 叠中文标题（标题依然正确，只是底图朴素）
+  //   3) 连本地合成都失败 → 无封面出稿
+  //
+  // 标题一律由字体引擎本地渲染：扩散模型画中文必乱码（实测「AI 三连炸」→「AI三连如人」）。
+  if (!thumbMediaId) {
+    const cover = splitCoverTitle(draft.title);
+    try {
+      const gen = await ImageGeneratorFactory.getInstance()
+        .getGenerator("ZHIPU_COGVIEW4");
+      if (!(gen instanceof ZhipuCogView4ImageGenerator)) {
+        throw new Error("工厂返回了非 ZhipuCogView4ImageGenerator 实例");
+      }
+      const bgUrl = await gen.generate({
+        prompt: buildTechCoverPrompt(),
+        size: "1440x720",
+      });
+      const bgResp = await fetch(bgUrl);
+      if (!bgResp.ok) {
+        throw new Error(`下载封面底图失败: HTTP ${bgResp.status}`);
+      }
+      const bgBytes = new Uint8Array(await bgResp.arrayBuffer());
+      const jpeg = await composeCover({
+        title: cover.title,
+        subline: cover.subline,
+        subtitle: cover.subtitle,
+        background: bgBytes,
+      });
+      thumbMediaId = await publisher.uploadThumb({
+        kind: "bytes",
+        data: jpeg,
+        filename: "cover.jpg",
+        mimeType: "image/jpeg",
+      });
+      console.log(
+        `[draft-publish:${id}] 智谱底图+本地标题 → 封面已上传 thumbMediaId=${thumbMediaId} (${jpeg.length} bytes)`,
+      );
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      console.warn(
+        `[draft-publish:${id}] 智谱封面链路失败（${reason}），降级为本地渐变底图`,
+      );
+      // ---- 2) 本地渐变底图 + 本地标题 ----
+      try {
+        const jpeg = await composeCover({
+          title: cover.title,
+          subline: cover.subline,
+          subtitle: cover.subtitle,
+        });
+        thumbMediaId = await publisher.uploadThumb({
+          kind: "bytes",
+          data: jpeg,
+          filename: "cover.jpg",
+          mimeType: "image/jpeg",
+        });
+        console.log(
+          `[draft-publish:${id}] 本地封面上传成功 thumbMediaId=${thumbMediaId} (${jpeg.length} bytes)`,
+        );
+      } catch (e2) {
+        const reason2 = e2 instanceof Error ? e2.message : String(e2);
+        console.warn(
+          `[draft-publish:${id}] 本地封面合成也失败（${reason2}），继续无封面出稿`,
+        );
+        thumbMediaId = "";
+      }
+    }
+  }
+  const result = await publisher.publish(draft.html, {
+    title: draft.title,
+    author,
+    thumbMediaId,
+  });
   const now = Date.now();
   drafts[index] = {
     ...draft,
+    thumbMediaId: thumbMediaId || draft.thumbMediaId,
     status: result.success ? "published" : draft.status,
     updatedAt: now,
     publishedAt: result.success ? now : draft.publishedAt,
