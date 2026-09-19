@@ -510,26 +510,76 @@
         color: var(--muted);
       }
 
+      /*
+       * 全局提示条
+       * 关键：必须高于 .modal-overlay(z-index:20)，否则被遮罩压暗，用户根本看不清
+       * 位置改成顶部居中 —— 右下角是注意力盲区
+       */
       .toast {
         position: fixed;
-        right: 26px;
-        bottom: 26px;
-        background: rgba(26, 31, 39, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        top: 26px;
+        left: 50%;
+        transform: translate(-50%, -14px) scale(0.97);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 220px;
+        max-width: min(560px, 88vw);
+        padding: 13px 20px;
+        border-radius: 14px;
+        background: rgba(18, 24, 32, 0.985);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
         color: var(--text);
-        padding: 12px 16px;
-        border-radius: 12px;
-        box-shadow: var(--shadow);
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: pre-wrap;
         opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
         pointer-events: none;
-        font-size: 12px;
+        transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: 60;
       }
 
       .toast.show {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate(-50%, 0) scale(1);
+      }
+
+      .toast-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+        font-weight: 700;
+        flex: none;
+      }
+
+      .toast.info .toast-icon {
+        background: rgba(148, 163, 184, 0.22);
+        color: #cbd5e1;
+      }
+
+      .toast.success {
+        border-color: rgba(110, 231, 183, 0.5);
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(110, 231, 183, 0.1);
+      }
+
+      .toast.success .toast-icon {
+        background: rgba(110, 231, 183, 0.2);
+        color: #6ee7b7;
+      }
+
+      .toast.error {
+        border-color: rgba(244, 114, 182, 0.55);
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(244, 114, 182, 0.1);
+      }
+
+      .toast.error .toast-icon {
+        background: rgba(244, 114, 182, 0.2);
+        color: #f472b6;
       }
     </style>
   </head>
@@ -645,20 +695,43 @@
         </div>
       </div>
     </div>
-    <div class="toast" id="toast"></div>
+    <div class="toast info" id="toast" role="status" aria-live="polite">
+      <span class="toast-icon" id="toast-icon"></span>
+      <span class="toast-text" id="toast-text"></span>
+    </div>
     <script>
       const toast = document.getElementById("toast");
+      const toastIcon = document.getElementById("toast-icon");
+      const toastText = document.getElementById("toast-text");
 
-      const showToast = (message) => {
+      const TOAST_ICON = { success: "✓", error: "✕", info: "i" };
+      const TOAST_DURATION = { success: 3000, error: 4200, info: 2400 };
+
+      /**
+       * 顶部居中提示。type: "success" | "error" | "info"
+       * 成功/失败用不同颜色与图标，避免"看到了但没意识到失败了"。
+       */
+      const showToast = (message, type = "info") => {
         if (!toast) {
           return;
         }
-        toast.textContent = message;
-        toast.classList.add("show");
+        const kind = TOAST_ICON[type] ? type : "info";
+        if (toastText) {
+          toastText.textContent = message;
+        } else {
+          toast.textContent = message;
+        }
+        if (toastIcon) {
+          toastIcon.textContent = TOAST_ICON[kind];
+        }
+        toast.classList.remove("success", "error", "info", "show");
+        // 强制重排：连续两次提示时也能重放进入动画
+        void toast.offsetWidth;
+        toast.classList.add(kind, "show");
         window.clearTimeout(showToast.timer);
         showToast.timer = window.setTimeout(() => {
           toast.classList.remove("show");
-        }, 1800);
+        }, TOAST_DURATION[kind]);
       };
 
       const runButton = document.getElementById("run-publish");
@@ -685,9 +758,9 @@
             if (!response.ok) {
               throw new Error("workflow failed");
             }
-            showToast("发布请求已触发");
+            showToast("发布请求已触发", "success");
           } catch {
-            showToast("发布触发失败");
+            showToast("发布触发失败", "error");
           } finally {
             runButton.classList.remove("loading");
           }
@@ -783,25 +856,25 @@
         try {
           const response = await fetch(`/api/drafts/${id}`);
           if (!response.ok) {
-            showToast("草稿不存在");
+            showToast("草稿不存在", "error");
             return;
           }
           const draft = await response.json();
           setEditorDraft(draft);
         } catch {
-          showToast("草稿读取失败");
+          showToast("草稿读取失败", "error");
         }
       };
 
       const saveDraft = async () => {
         if (!currentDraftId) {
-          showToast("请先选择草稿");
+          showToast("请先选择草稿", "error");
           return;
         }
         const title = draftTitleInput ? draftTitleInput.value.trim() : "";
         const html = draftHtmlInput ? draftHtmlInput.innerHTML : "";
         if (!title || !html.trim()) {
-          showToast("标题或内容不能为空");
+          showToast("标题或内容不能为空", "error");
           return;
         }
         draftSaveButton?.classList.add("loading");
@@ -816,19 +889,22 @@
           }
           const draft = await response.json();
           setEditorDraft(draft);
-          showToast("草稿已保存");
+          showToast("草稿已保存", "success");
           await loadDrafts();
         } catch {
-          showToast("草稿保存失败");
+          showToast("草稿保存失败", "error");
         } finally {
           draftSaveButton?.classList.remove("loading");
         }
       };
 
+      /** 发布成功后，弹窗保留多久再自动关闭（留时间让用户看清提示） */
+      const PUBLISH_MODAL_CLOSE_DELAY = 900;
+
       const publishDraft = async (id) => {
         const targetId = id || currentDraftId;
         if (!targetId) {
-          showToast("请先选择草稿");
+          showToast("请先选择草稿", "error");
           return;
         }
         draftPublishButton?.classList.add("loading");
@@ -837,14 +913,31 @@
             method: "POST",
           });
           if (!response.ok) {
-            throw new Error("publish failed");
+            throw new Error(`HTTP ${response.status}`);
           }
           const data = await response.json();
+          // 后端即使发布失败也返回 200，真正结果在 result.success，不能只看 response.ok
+          const result = data?.result;
+          const succeeded = result?.success !== false;
+
           setEditorDraft(data.draft);
-          showToast("已推送到微信草稿箱");
           await loadDrafts();
-        } catch {
-          showToast("草稿发布失败");
+
+          if (!succeeded) {
+            showToast(`发布失败：${result?.error || "未知错误"}`, "error");
+            return;
+          }
+
+          showToast("已成功推送到微信草稿箱", "success");
+          // 先让提示出现，再关闭编辑弹窗
+          window.setTimeout(() => {
+            draftModal?.classList.remove("show");
+          }, PUBLISH_MODAL_CLOSE_DELAY);
+        } catch (error) {
+          showToast(
+            `草稿发布失败：${error instanceof Error ? error.message : String(error)}`,
+            "error",
+          );
         } finally {
           draftPublishButton?.classList.remove("loading");
         }
@@ -852,7 +945,7 @@
 
       const deleteDraft = async () => {
         if (!currentDraftId) {
-          showToast("请先选择草稿");
+          showToast("请先选择草稿", "error");
           return;
         }
         draftDeleteButton?.classList.add("loading");
@@ -864,10 +957,10 @@
             throw new Error("delete failed");
           }
           setEditorDraft(null);
-          showToast("草稿已删除");
+          showToast("草稿已删除", "success");
           await loadDrafts();
         } catch {
-          showToast("草稿删除失败");
+          showToast("草稿删除失败", "error");
         } finally {
           draftDeleteButton?.classList.remove("loading");
         }
