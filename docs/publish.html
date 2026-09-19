@@ -511,76 +511,9 @@
       }
 
       /*
-       * 全局提示条
-       * 关键：必须高于 .modal-overlay(z-index:20)，否则被遮罩压暗，用户根本看不清
-       * 位置改成顶部居中 —— 右下角是注意力盲区
+       * 提示条样式与 showToast 已抽到公共文件 js/ui-toast.js（全站统一）
+       * 注意：其 z-index 为 60，高于 .modal-overlay(20)，否则会被弹窗遮罩压暗。
        */
-      .toast {
-        position: fixed;
-        top: 26px;
-        left: 50%;
-        transform: translate(-50%, -14px) scale(0.97);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 220px;
-        max-width: min(560px, 88vw);
-        padding: 13px 20px;
-        border-radius: 14px;
-        background: rgba(18, 24, 32, 0.985);
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
-        color: var(--text);
-        font-size: 15px;
-        font-weight: 600;
-        line-height: 1.4;
-        white-space: pre-wrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-        z-index: 60;
-      }
-
-      .toast.show {
-        opacity: 1;
-        transform: translate(-50%, 0) scale(1);
-      }
-
-      .toast-icon {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        font-size: 14px;
-        font-weight: 700;
-        flex: none;
-      }
-
-      .toast.info .toast-icon {
-        background: rgba(148, 163, 184, 0.22);
-        color: #cbd5e1;
-      }
-
-      .toast.success {
-        border-color: rgba(110, 231, 183, 0.5);
-        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(110, 231, 183, 0.1);
-      }
-
-      .toast.success .toast-icon {
-        background: rgba(110, 231, 183, 0.2);
-        color: #6ee7b7;
-      }
-
-      .toast.error {
-        border-color: rgba(244, 114, 182, 0.55);
-        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), 0 0 0 4px rgba(244, 114, 182, 0.1);
-      }
-
-      .toast.error .toast-icon {
-        background: rgba(244, 114, 182, 0.2);
-        color: #f472b6;
-      }
 
       /*
        * IP 白名单警告横幅
@@ -797,44 +730,10 @@
         </div>
       </div>
     </div>
-    <div class="toast info" id="toast" role="status" aria-live="polite">
-      <span class="toast-icon" id="toast-icon"></span>
-      <span class="toast-text" id="toast-text"></span>
-    </div>
+    <div class="toast" id="toast"></div>
+    <script src="./js/ui-toast.js"></script>
     <script>
-      const toast = document.getElementById("toast");
-      const toastIcon = document.getElementById("toast-icon");
-      const toastText = document.getElementById("toast-text");
-
-      const TOAST_ICON = { success: "✓", error: "✕", info: "i" };
-      const TOAST_DURATION = { success: 3000, error: 4200, info: 2400 };
-
-      /**
-       * 顶部居中提示。type: "success" | "error" | "info"
-       * 成功/失败用不同颜色与图标，避免"看到了但没意识到失败了"。
-       */
-      const showToast = (message, type = "info") => {
-        if (!toast) {
-          return;
-        }
-        const kind = TOAST_ICON[type] ? type : "info";
-        if (toastText) {
-          toastText.textContent = message;
-        } else {
-          toast.textContent = message;
-        }
-        if (toastIcon) {
-          toastIcon.textContent = TOAST_ICON[kind];
-        }
-        toast.classList.remove("success", "error", "info", "show");
-        // 强制重排：连续两次提示时也能重放进入动画
-        void toast.offsetWidth;
-        toast.classList.add(kind, "show");
-        window.clearTimeout(showToast.timer);
-        showToast.timer = window.setTimeout(() => {
-          toast.classList.remove("show");
-        }, TOAST_DURATION[kind]);
-      };
+      /* showToast 由公共文件 js/ui-toast.js 提供（顶部居中 + success/error/info 三态） */
 
       const runButton = document.getElementById("run-publish");
       if (runButton) {

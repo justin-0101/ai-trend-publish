@@ -47,6 +47,33 @@ errcode: 40164
   失败时红框显示具体原因
 - 发布成功后延时 900ms 自动关闭编辑弹窗，让用户先看清提示
 
+### 提示条收敛为全站公共组件（消除 5 份重复实现）
+
+**问题**：这个提示条原先在 **5 个页面**里各复制了一份（CSS + `showToast` 函数），
+所以修好了 `publish.html` 的“被弹窗遮罩压暗”，其余 4 页仍是旧的右下角 12px 小灰字——
+样式持续漂移。另外 `sources.html` 还是 `var` + `function` 的旧写法，与其余页不一致。
+
+**改法**：新增 `docs/js/ui-toast.js`，一份定义供全站使用。
+
+- 自注入 `<style>`（页面无需再写 toast 相关 CSS）
+- 自建/复用 `#toast` 元素，统一内部结构（图标 + 文字）
+- 导出 `window.showToast(message, type)`，`type` = `success` / `error` / `info`
+- 幂等：重复引入、页面已自建 `#toast` 都不会出问题
+- 顶部居中、`z-index:60`（高于 `.modal-overlay` 的 20）、三态颜色 + 圆形图标
+
+**涉及页面**（每页：删内联 CSS + 删内联 `showToast` + 加一行 `<script src="./js/ui-toast.js">`）
+
+`prototype.html` / `sources.html` / `templates.html` / `workflows.html` / `publish.html`
+
+- 共删除约 280 行重复代码，全站只剩一份实现
+- 页内 `showToast(...)` 调用无需修改：移除局部定义后自然解析到全局函数
+
+**验证**
+
+- 5 页内联脚本全部通过 `node --check`（含 `sources.html` 的 module 脚本）
+- 真实浏览器逐页实测：`window.showToast` 已加载、样式已注入、
+  `success`（✓）与 `error`（✕）两态类名与图标均正确
+
 ### 封面图改为「AI 底图 + 本地字体重排」（解决 AI 直出中文乱码）
 
 **问题**：原先封面由文生图模型直接生成整张图（包含标题文字）。实测智谱 cogview-4 渲染中文严重乱码——

@@ -441,27 +441,7 @@
         transform: translateY(-1px);
       }
 
-      .toast {
-        position: fixed;
-        right: 26px;
-        bottom: 26px;
-        background: rgba(26, 31, 39, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: var(--text);
-        padding: 12px 16px;
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        pointer-events: none;
-        font-size: 12px;
-      }
-
-      .toast.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      /* 提示条样式已抽到公共文件 js/ui-toast.js（全站统一，避免各页复制漂移） */
 
       .view.hidden {
         display: none;
@@ -790,20 +770,9 @@
       </div>
     </div>
     <div class="toast" id="toast"></div>
+    <script src="./js/ui-toast.js"></script>
     <script>
-      const toast = document.getElementById("toast");
-
-      const showToast = (message) => {
-        if (!toast) {
-          return;
-        }
-        toast.textContent = message;
-        toast.classList.add("show");
-        window.clearTimeout(showToast.timer);
-        showToast.timer = window.setTimeout(() => {
-          toast.classList.remove("show");
-        }, 1800);
-      };
+      /* showToast 由公共文件 js/ui-toast.js 提供（顶部居中 + success/error/info 三态） */
 
       const applyStored = (key, fallback) => {
         const value = window.localStorage.getItem(key);
