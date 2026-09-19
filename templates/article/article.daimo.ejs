@@ -1,0 +1,25 @@
+<!-- Xiaohu 风格：大厂（daimo） -->
+<div style="margin:0 auto;max-width:680px;padding:32px 22px;background:#fbfaf8;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;line-height:1.9;color:#262320;">
+  <div style="margin:0 0 38px;padding:0 0 18px;border-bottom:1px solid #ece8e0;">
+    <div style="margin:0 0 12px;color:#b5512f;font-size:12px;letter-spacing:0.18em;"><%= tagline || 'TECH · INSIGHT · UPDATE' %></div>
+    <div style="font-family:'Source Han Serif SC','Songti SC','Noto Serif CJK SC',Georgia,serif;font-size:30px;font-weight:700;color:#1a1a1a;line-height:1.38;letter-spacing:0.3px;"><%= brand || 'AI 周报' %></div>
+    <div style="margin-top:10px;color:#766f66;font-size:13px;">把复杂变化，讲成可以使用的判断</div>
+  </div>
+
+  <% for (var i = 0; i < articles.length; i++) { var article = articles[i]; %>
+    <div style="margin:0 0 44px;">
+      <div style="margin:0 0 18px;padding-left:20px;border-left:2px solid #b5512f;">
+        <div style="margin:0 0 7px;color:#b5512f;font-size:12px;letter-spacing:0.14em;">NO.<%= (i + 1).toString().padStart(2, '0') %></div>
+        <div style="font-family:'Source Han Serif SC','Songti SC','Noto Serif CJK SC',Georgia,serif;font-size:24px;font-weight:700;color:#1a1a1a;line-height:1.45;"><%= article.title %></div>
+        <div style="margin-top:8px;color:#8a8177;font-size:13px;"><%= article.publishDate || '' %></div>
+      </div>
+      <div style="color:#262320;font-size:16px;text-align:justify;">
+        <% var content = article.content || ''; var paragraphs = content.split('<next_paragraph />'); for (var k = 0; k < paragraphs.length; k++) { var para = paragraphs[k].trim(); if (para.length > 0) { %>
+          <div style="margin:0 0 18px;line-height:1.9;"><%- para %></div>
+        <% } } %>
+      </div>
+    </div>
+  <% } %>
+
+  <div style="margin:18px 0 0;padding:16px 0;border-top:1px solid #ece8e0;color:#8a8177;font-size:13px;text-align:center;">保持好奇，保持判断</div>
+</div>

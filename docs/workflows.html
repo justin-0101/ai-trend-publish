@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 工作流</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .run-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f6c859, #ffda7b);
+        color: #2d1a00;
+        font-weight: 600;
+        border: none;
+        box-shadow: 0 12px 24px rgba(246, 200, 89, 0.35);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .run-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 8px 18px rgba(246, 200, 89, 0.28);
+      }
+
+      .run-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .config-panel {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .config-title {
+        font-size: 13px;
+        color: #fbd88a;
+        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle input {
+        accent-color: #f6c859;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .flow {
+        grid-column: span 7;
+        display: grid;
+        gap: 12px;
+      }
+
+      .flow-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .flow-node {
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(246, 200, 89, 0.15);
+        color: #ffe7b0;
+        font-size: 12px;
+      }
+
+      .flow-desc {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .config {
+        grid-column: span 5;
+        display: grid;
+        gap: 12px;
+      }
+
+      .config-row {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .config-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .config-row input,
+      .config-row select {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+      }
+
+      .config-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .btn-secondary {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn-secondary:active {
+        transform: translateY(1px);
+      }
+
+      .outputs {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .output-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .output-card h4 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .output-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .job-status {
+        grid-column: span 12;
+      }
+
+      .job-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .job-kv {
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+        display: grid;
+        gap: 6px;
+      }
+
+      .job-kv strong {
+        color: var(--text);
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .job-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .job-history {
+        grid-column: span 12;
+      }
+
+      .job-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .job-row {
+        display: grid;
+        grid-template-columns: 0.8fr 1.1fr 0.7fr 0.7fr 1.4fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .job-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .job-row.active {
+        border-color: rgba(246, 200, 89, 0.8);
+        background: rgba(246, 200, 89, 0.12);
+      }
+
+      .status-pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+      }
+
+      .status-pill.running {
+        background: rgba(246, 200, 89, 0.18);
+        color: #ffe7b0;
+      }
+
+      .status-pill.success {
+        background: rgba(110, 231, 183, 0.2);
+        color: #b7f3d9;
+      }
+
+      .status-pill.error {
+        background: rgba(244, 114, 182, 0.18);
+        color: #f9bddb;
+      }
+
+      .status-pill.unknown {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--muted);
+      }
+
+      .ghost-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .ghost-btn:active {
+        transform: translateY(1px);
+      }
+
+      .job-empty {
+        color: var(--muted);
+        font-size: 12px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+      }
+
+      @media (max-width: 980px) {
+        .job-summary {
+          grid-template-columns: 1fr;
+        }
+
+        .job-row {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+      }
+
+      .toast {
+        position: fixed;
+        right: 26px;
+        bottom: 26px;
+        background: rgba(26, 31, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        font-size: 12px;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* ---------------------------------------------- 运行详情抽屉 */
+      .job-detail-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        background: rgba(6, 8, 12, 0.66);
+        backdrop-filter: blur(3px);
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .job-detail-mask.hidden {
+        display: none;
+      }
+
+      .job-detail {
+        width: min(620px, 100%);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: rgba(20, 24, 31, 0.99);
+        border-left: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        animation: job-detail-in 0.18s ease-out;
+      }
+
+      @keyframes job-detail-in {
+        from {
+          transform: translateX(24px);
+          opacity: 0.6;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .job-detail-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .job-detail-head h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .job-detail-sub {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .job-detail-head-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .job-detail-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 16px 20px 32px;
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+
+      .job-detail-section {
+        display: grid;
+        gap: 10px;
+      }
+
+      .job-detail-section > h4 {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .job-detail-empty,
+      .job-detail-hint {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .job-detail-hint a {
+        color: var(--accent);
+      }
+
+      .job-detail-kv {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .job-detail-kv > div {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--text);
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .job-detail-kv > div > span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .job-detail-kv code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11.5px;
+        word-break: break-all;
+      }
+
+      .job-detail-pre {
+        margin: 0;
+        max-height: 260px;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid var(--line);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11.5px;
+        line-height: 1.65;
+        color: var(--text);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .job-detail-logs {
+        max-height: 300px;
+      }
+
+      .job-detail-error {
+        display: grid;
+        gap: 10px;
+      }
+
+      .job-detail-error-msg {
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(244, 114, 182, 0.12);
+        border: 1px solid rgba(244, 114, 182, 0.35);
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: #ffd9ec;
+      }
+
+      .job-step-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .job-step {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        display: grid;
+        gap: 6px;
+      }
+
+      .job-step.failure {
+        border-color: rgba(244, 114, 182, 0.45);
+        background: rgba(244, 114, 182, 0.1);
+      }
+
+      .job-step.running {
+        border-color: rgba(246, 200, 89, 0.4);
+      }
+
+      .job-step-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+
+      .job-step-head strong {
+        color: var(--text);
+        font-weight: 600;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .job-step-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+      }
+
+      .job-step.success .job-step-dot {
+        background: var(--accent-2);
+      }
+
+      .job-step.failure .job-step-dot {
+        background: var(--danger);
+      }
+
+      .job-step.running .job-step-dot {
+        background: var(--accent);
+        box-shadow: 0 0 0 3px rgba(246, 200, 89, 0.18);
+      }
+
+      .job-step-status,
+      .job-step-time,
+      .job-step-attempts {
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+
+      .job-step-error {
+        font-size: 12px;
+        color: #ffd9ec;
+        line-height: 1.6;
+        word-break: break-word;
+      }
+
+      .job-step-result {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.6;
+        word-break: break-word;
+      }
+
+      .job-detail-drafts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .job-detail-drafts li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .job-detail-drafts li strong {
+        color: var(--text);
+        font-weight: 600;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .job-detail-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item active" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>工作流状态</h4>
+          <p>当前启用 2 条工作流，最近运行 12 分钟前</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div class="search">搜索工作流或节点</div>
+          <div class="top-actions">
+            <div class="pill">已启用 2</div>
+            <button class="btn-secondary" id="save-workflow-settings" type="button">保存配置</button>
+            <button class="run-btn" id="run-workflow" type="button">运行工作流</button>
+          </div>
+        </div>
+        <div class="config-panel">
+          <div class="config-title">执行参数</div>
+          <div class="config-grid">
+            <label class="field">
+              工作流类型
+              <select id="workflow-type">
+                <option value="">请选择</option>
+                <option value="weixin-article">文章工作流</option>
+                <option value="weixin-hellogithub">HelloGitHub</option>
+                <option value="weixin-aibench">AI Bench</option>
+              </select>
+            </label>
+            <label class="field">
+              来源类型
+              <select id="workflow-source">
+                <option value="all">全部</option>
+                <option value="firecrawl">Firecrawl</option>
+                <option value="twitter">Twitter</option>
+                <option value="twitter-cookie">Twitter Cookie</option>
+              </select>
+            </label>
+            <label class="field">
+              入选数量
+              <input id="workflow-max" type="number" min="1" max="50" placeholder="默认 10">
+            </label>
+            <label class="field">
+              HelloGitHub 数量
+              <input id="workflow-max-items" type="number" min="1" max="30" placeholder="默认 10">
+            </label>
+            <label class="field">
+              发布方式
+              <select id="workflow-publish-mode">
+                <option value="immediate">立即发布</option>
+                <option value="draft">保存到草稿箱</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <section class="grid">
+          <div class="panel flow">
+            <div class="panel-title">
+              <h3>流程节点</h3>
+              <span class="pill" id="workflow-type-pill">请选择工作流类型</span>
+            </div>
+            <div class="flow-row">
+              <div class="flow-node">采集</div>
+              <div class="flow-desc" id="flow-desc-source">请选择工作流类型</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-node">打分</div>
+              <div class="flow-desc" id="flow-desc-score">请选择工作流类型</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-node">生成</div>
+              <div class="flow-desc" id="flow-desc-render">请选择工作流类型</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-node">发布</div>
+              <div class="flow-desc" id="flow-desc-publish">请选择工作流类型</div>
+            </div>
+          </div>
+          <div class="panel config">
+            <div class="panel-title">
+              <h3>核心配置</h3>
+              <span class="pill" id="workflow-save-state">未保存</span>
+            </div>
+            <div class="config-row">
+              <strong>默认入选数量</strong>
+              <input id="core-article-max" type="number" min="1" max="50" placeholder="例如 20">
+            </div>
+            <div class="config-row">
+              <strong>评分权重</strong>
+              <div style="display:flex; gap:10px;">
+                <input id="core-heat" type="number" min="0" max="1" step="0.1" placeholder="热度 0.3">
+                <input id="core-quality" type="number" min="0" max="1" step="0.1" placeholder="质量 0.7">
+              </div>
+            </div>
+            <div class="config-row">
+              <strong>模板绑定</strong>
+              <input id="core-templates" type="text" placeholder="例如 modern.ejs, tech.ejs">
+            </div>
+            <div class="config-row">
+              <strong>输出格式</strong>
+              <select id="core-output">
+                <option value="html-weixin">HTML + 微信排版</option>
+                <option value="html">HTML</option>
+              </select>
+            </div>
+            <div class="config-row">
+              <strong>默认同步发布</strong>
+              <select id="core-publish">
+                <option value="false">否</option>
+                <option value="true">是</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel outputs">
+            <div class="output-card">
+              <h4>文章工作流</h4>
+              <p>面向技术周报，强调摘要与重点标签</p>
+            </div>
+            <div class="output-card">
+              <h4>HelloGitHub 工作流</h4>
+              <p>展示 README 摘要与亮点项目卡片</p>
+            </div>
+            <div class="output-card">
+              <h4>AI Bench 工作流</h4>
+              <p>聚合评测榜单与模型趋势</p>
+            </div>
+          </div>
+          <div class="panel job-status" id="job-status-panel">
+            <div class="panel-title">
+              <h3>运行状态</h3>
+              <span class="pill" id="job-status-pill">未运行</span>
+            </div>
+            <div class="job-summary">
+              <div class="job-kv">
+                <strong>当前状态</strong>
+                <div id="job-status-text">-</div>
+              </div>
+              <div class="job-kv">
+                <strong>工作流</strong>
+                <div id="job-type-text">-</div>
+              </div>
+              <div class="job-kv">
+                <strong>JobId</strong>
+                <div id="job-id-text">-</div>
+              </div>
+              <div class="job-kv">
+                <strong>耗时</strong>
+                <div id="job-duration-text">-</div>
+              </div>
+            </div>
+            <div class="job-kv" style="margin-top:12px;">
+              <strong>信息</strong>
+              <div id="job-message-text">-</div>
+            </div>
+            <div class="job-actions" style="margin-top:12px;">
+              <button class="ghost-btn" id="job-stop" type="button">停止轮询</button>
+              <button class="ghost-btn" id="job-refresh" type="button">刷新一次</button>
+              <button class="ghost-btn" id="job-copy" type="button">复制 JobId</button>
+            </div>
+          </div>
+          <div class="panel job-history">
+            <div class="panel-title">
+              <h3>最近运行</h3>
+              <span class="pill" id="job-history-count">0</span>
+            </div>
+            <div class="job-list" id="job-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="job-detail-mask hidden" id="job-detail-mask">
+      <aside class="job-detail" id="job-detail" role="dialog" aria-modal="true"
+             aria-labelledby="job-detail-heading">
+        <div class="job-detail-head">
+          <div>
+            <h3 id="job-detail-heading">运行详情</h3>
+            <div class="job-detail-sub" id="job-detail-sub">-</div>
+          </div>
+          <div class="job-detail-head-actions">
+            <button class="ghost-btn" id="job-detail-refresh" type="button">刷新</button>
+            <button class="ghost-btn" id="job-detail-close" type="button">关闭</button>
+          </div>
+        </div>
+        <div class="job-detail-body" id="job-detail-body"></div>
+      </aside>
+    </div>
+    <script type="module">
+      import {
+        getWorkflowSaveStateText,
+        isWorkflowActionsDisabled,
+        isWorkflowInputsDisabled,
+      } from "./js/flow-helpers.js";
+      const toast = document.getElementById("toast");
+
+      const showToast = (message) => {
+        if (!toast) {
+          return;
+        }
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1800);
+      };
+
+      const apiBase = window.location.protocol === "http:" ||
+          window.location.protocol === "https:"
+        ? ""
+        : "http://localhost:8787";
+
+      const runButton = document.getElementById("run-workflow");
+      const saveButton = document.getElementById("save-workflow-settings");
+      const jobStatusPill = document.getElementById("job-status-pill");
+      const jobStatusText = document.getElementById("job-status-text");
+      const jobTypeText = document.getElementById("job-type-text");
+      const jobIdText = document.getElementById("job-id-text");
+      const jobDurationText = document.getElementById("job-duration-text");
+      const jobMessageText = document.getElementById("job-message-text");
+      const jobStopButton = document.getElementById("job-stop");
+      const jobRefreshButton = document.getElementById("job-refresh");
+      const jobCopyButton = document.getElementById("job-copy");
+      const jobListEl = document.getElementById("job-list");
+      const jobHistoryCountEl = document.getElementById("job-history-count");
+      const saveState = document.getElementById("workflow-save-state");
+      const flowTypePill = document.getElementById("workflow-type-pill");
+      const flowDescSource = document.getElementById("flow-desc-source");
+      const flowDescScore = document.getElementById("flow-desc-score");
+      const flowDescRender = document.getElementById("flow-desc-render");
+      const flowDescPublish = document.getElementById("flow-desc-publish");
+
+      const STORAGE_RECENT_JOBS = "tp.workflows.recentJobs";
+      const STORAGE_ACTIVE_JOB = "tp.workflows.activeJobId";
+      const MAX_RECENT_JOBS = 12;
+
+      const safeJsonParse = (value, fallback) => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return fallback;
+        }
+      };
+
+      const readRecentJobs = () => {
+        const raw = window.localStorage.getItem(STORAGE_RECENT_JOBS);
+        const parsed = raw ? safeJsonParse(raw, []) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      };
+
+      const writeRecentJobs = (items) => {
+        window.localStorage.setItem(
+          STORAGE_RECENT_JOBS,
+          JSON.stringify(items.slice(0, MAX_RECENT_JOBS)),
+        );
+      };
+
+      const formatTime = (value) => {
+        if (!value) return "-";
+        try {
+          return new Date(value).toLocaleString();
+        } catch {
+          return "-";
+        }
+      };
+
+      const formatDuration = (ms) => {
+        if (!Number.isFinite(ms) || ms < 0) return "-";
+        const total = Math.floor(ms / 1000);
+        const s = total % 60;
+        const m = Math.floor(total / 60) % 60;
+        const h = Math.floor(total / 3600);
+        const pad = (n) => String(n).padStart(2, "0");
+        if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+        return `${pad(m)}:${pad(s)}`;
+      };
+
+      const shortId = (id) => {
+        if (!id) return "-";
+        return id.length > 12 ? `${id.slice(0, 6)}...${id.slice(-4)}` : id;
+      };
+
+      const statusLabel = (status) => {
+        if (status === "running") return "运行中";
+        if (status === "success") return "成功";
+        if (status === "error") return "失败";
+        return "未知";
+      };
+
+      const statusClass = (status) => {
+        if (status === "running") return "running";
+        if (status === "success") return "success";
+        if (status === "error") return "error";
+        return "unknown";
+      };
+
+      const setActiveJobId = (jobId) => {
+        if (!jobId) {
+          window.localStorage.removeItem(STORAGE_ACTIVE_JOB);
+          return;
+        }
+        window.localStorage.setItem(STORAGE_ACTIVE_JOB, jobId);
+      };
+
+      const getActiveJobId = () => window.localStorage.getItem(STORAGE_ACTIVE_JOB) || "";
+
+      let pollTimer = null;
+      let pollingJobId = "";
+      let pollingPaused = false;
+
+      const renderJobPanel = (job) => {
+        const status = job?.status || "unknown";
+        if (jobStatusPill) {
+          jobStatusPill.textContent = statusLabel(status);
+          jobStatusPill.className = `pill status-pill ${statusClass(status)}`;
+        }
+        if (jobStatusText) {
+          jobStatusText.textContent = statusLabel(status);
+        }
+        if (jobTypeText) {
+          jobTypeText.textContent = job?.type || "-";
+        }
+        if (jobIdText) {
+          jobIdText.textContent = job?.id || "-";
+        }
+        if (jobDurationText) {
+          const startedAt = job?.startedAt || 0;
+          const finishedAt = job?.finishedAt || 0;
+          const base = startedAt ? startedAt : 0;
+          const end = status === "running" ? Date.now() : finishedAt;
+          jobDurationText.textContent = base ? formatDuration(end - base) : "-";
+        }
+        if (jobMessageText) {
+          if (status === "error") {
+            jobMessageText.textContent = job?.message || "执行失败";
+          } else if (status === "running") {
+            jobMessageText.textContent = "正在执行中…";
+          } else if (status === "success") {
+            jobMessageText.textContent = "执行完成";
+          } else {
+            jobMessageText.textContent = "暂无运行信息";
+          }
+        }
+      };
+
+      const upsertRecentJob = (patch) => {
+        const jobs = readRecentJobs();
+        const index = jobs.findIndex((j) => j.jobId === patch.jobId);
+        const next = {
+          jobId: patch.jobId,
+          type: patch.type || (index >= 0 ? jobs[index].type : ""),
+          status: patch.status || (index >= 0 ? jobs[index].status : "unknown"),
+          startedAt: patch.startedAt || (index >= 0 ? jobs[index].startedAt : Date.now()),
+          finishedAt: typeof patch.finishedAt === "number"
+            ? patch.finishedAt
+            : (index >= 0 ? jobs[index].finishedAt : null),
+          message: typeof patch.message === "string"
+            ? patch.message
+            : (index >= 0 ? jobs[index].message : ""),
+          updatedAt: Date.now(),
+        };
+        if (index >= 0) {
+          jobs.splice(index, 1);
+        }
+        jobs.unshift(next);
+        writeRecentJobs(jobs);
+      };
+
+      const renderRecentJobs = () => {
+        if (!jobListEl) return;
+        const jobs = readRecentJobs();
+        const active = getActiveJobId();
+        if (jobHistoryCountEl) {
+          jobHistoryCountEl.textContent = String(jobs.length);
+        }
+        jobListEl.innerHTML = "";
+        if (!jobs.length) {
+          const empty = document.createElement("div");
+          empty.className = "job-empty";
+          empty.textContent = "暂无运行记录，点击“运行工作流”后会在此显示状态";
+          jobListEl.appendChild(empty);
+          return;
+        }
+        jobs.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "job-row";
+          if (item.jobId === active) {
+            row.classList.add("active");
+          }
+          // 只有正在跑的才实时累加耗时；终态记录没拿到 finishedAt（例如服务重启后只剩本地条）
+          // 就显示 "-"，否则会看到失败的行耗时一直在涨（误导）。
+          const durationText = !item.startedAt
+            ? "-"
+            : item.finishedAt
+            ? formatDuration(item.finishedAt - item.startedAt)
+            : (item.status === "running" ? formatDuration(Date.now() - item.startedAt) : "-");
+          row.innerHTML = `
+            <div>${formatTime(item.startedAt)}</div>
+            <strong>${item.type || "-"}</strong>
+            <div class="status-pill ${statusClass(item.status)}">${statusLabel(item.status)}</div>
+            <div>${durationText}</div>
+            <div>${shortId(item.jobId)}</div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+              <button class="ghost-btn" data-action="view" data-id="${item.jobId}">查看</button>
+              <button class="ghost-btn" data-action="copy" data-id="${item.jobId}">复制</button>
+            </div>
+          `;
+          jobListEl.appendChild(row);
+        });
+      };
+
+      const fetchJobStatus = async (jobId) => {
+        const resp = await fetch(
+          `${apiBase}/api/workflows/status?jobId=${encodeURIComponent(jobId)}`,
+        );
+        if (!resp.ok) {
+          const err = new Error("status failed");
+          err.status = resp.status;
+          throw err;
+        }
+        return await resp.json();
+      };
+
+      const stopPolling = () => {
+        if (pollTimer) {
+          window.clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      };
+
+      const startPolling = (jobId) => {
+        if (!jobId) return;
+        pollingPaused = false;
+        if (jobStopButton) {
+          jobStopButton.textContent = "停止轮询";
+        }
+        stopPolling();
+        pollingJobId = jobId;
+        setActiveJobId(jobId);
+        const tick = async () => {
+          if (!pollingJobId || pollingPaused) return;
+          try {
+            const job = await fetchJobStatus(pollingJobId);
+            renderJobPanel(job);
+            upsertRecentJob({
+              jobId: job.id,
+              type: job.type,
+              status: job.status,
+              startedAt: job.startedAt,
+              finishedAt: job.finishedAt,
+              message: job.message,
+            });
+            renderRecentJobs();
+            pollTickCount += 1;
+            if (pollTickCount % 5 === 0) {
+              refreshStaleRunningJobs();
+            }
+            if (job.status !== "running") {
+              stopPolling();
+            }
+          } catch (error) {
+            const status = error && typeof error === "object" ? error.status : null;
+            renderJobPanel({
+              id: pollingJobId,
+              type: "",
+              status: "unknown",
+              message: status === 404 ? "任务不存在（可能服务已重启）" : "状态查询失败",
+            });
+            upsertRecentJob({ jobId: pollingJobId, status: "unknown" });
+            renderRecentJobs();
+            stopPolling();
+          }
+        };
+        tick();
+        pollTimer = window.setInterval(tick, 1500);
+      };
+
+      /* ---------------------------------------------- 运行详情抽屉 */
+
+      const jobDetailMask = document.getElementById("job-detail-mask");
+      const jobDetailSub = document.getElementById("job-detail-sub");
+      const jobDetailBody = document.getElementById("job-detail-body");
+      const jobDetailClose = document.getElementById("job-detail-close");
+      const jobDetailRefresh = document.getElementById("job-detail-refresh");
+
+      let jobDetailTimer = null;
+      let jobDetailJobId = "";
+
+      const escapeHtml = (value) =>
+        String(value ?? "").replace(/[&<>"']/g, (ch) =>
+          ch === "&"
+            ? "&amp;"
+            : ch === "<"
+            ? "&lt;"
+            : ch === ">"
+            ? "&gt;"
+            : ch === '"'
+            ? "&quot;"
+            : "&#39;");
+
+      const formatClock = (value) => {
+        if (!value) return "-";
+        try {
+          return new Date(value).toLocaleTimeString();
+        } catch {
+          return "-";
+        }
+      };
+
+      const stepStatusLabel = (status) => {
+        if (status === "success") return "成功";
+        if (status === "failure") return "失败";
+        if (status === "running") return "运行中";
+        return "未知";
+      };
+
+      const detailSection = (title, inner) =>
+        `<section class="job-detail-section"><h4>${title}</h4>${inner}</section>`;
+
+      const renderSteps = (job) => {
+        const steps = Array.isArray(job && job.steps) ? job.steps : [];
+        if (!steps.length) {
+          return detailSection(
+            "步骤",
+            '<p class="job-detail-empty">没有步骤记录（早于本功能的运行不含步骤信息）</p>',
+          );
+        }
+        const items = steps.map((step) => {
+          const start = step.startedAt || 0;
+          const end = step.finishedAt || (step.status === "running" ? Date.now() : 0);
+          const duration = start && end ? formatDuration(end - start) : "-";
+          const attempts = Number(step.attempts) > 0
+            ? `<span class="job-step-attempts">重试 ${Number(step.attempts)} 次（共 ${Number(step.attempts) + 1} 次）</span>`
+            : "";
+          const error = step.error
+            ? `<div class="job-step-error">${escapeHtml(step.error)}</div>`
+            : "";
+          const result = step.resultPreview
+            ? `<div class="job-step-result">结果：${escapeHtml(step.resultPreview)}</div>`
+            : "";
+          return `<li class="job-step ${step.status}">
+            <div class="job-step-head">
+              <span class="job-step-dot"></span>
+              <strong>${escapeHtml(step.name)}</strong>
+              <span class="job-step-status">${stepStatusLabel(step.status)}</span>
+              <span class="job-step-time">${duration}</span>
+              ${attempts}
+            </div>
+            ${error}
+            ${result}
+          </li>`;
+        }).join("");
+        return detailSection("步骤", `<ol class="job-step-list">${items}</ol>`);
+      };
+
+      const renderJobDetail = (job) => {
+        if (!jobDetailBody) return;
+        const status = (job && job.status) || "unknown";
+        const startedAt = job && job.startedAt ? job.startedAt : 0;
+        const finishedAt = job && job.finishedAt ? job.finishedAt : 0;
+        const duration = startedAt
+          ? formatDuration((status === "running" ? Date.now() : finishedAt) - startedAt)
+          : "-";
+
+        if (jobDetailSub) {
+          jobDetailSub.innerHTML = `
+            <span class="status-pill ${statusClass(status)}">${statusLabel(status)}</span>
+            <span>${escapeHtml((job && job.type) || "-")}</span>
+            <code>${escapeHtml((job && job.id) || "-")}</code>
+            <span>耗时 ${duration}</span>`;
+        }
+
+        const payload = job && job.payload && typeof job.payload === "object" ? job.payload : null;
+        const payloadHtml = payload && Object.keys(payload).length
+          ? `<pre class="job-detail-pre">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`
+          : '<p class="job-detail-empty">没有参数记录</p>';
+
+        const errorMessage = (job && job.error && job.error.message) || (job && job.message) || "";
+        const errorStack = job && job.error && job.error.stack ? job.error.stack : "";
+        const errorHtml = errorMessage
+          ? `<div class="job-detail-error">
+              <div class="job-detail-error-msg">${escapeHtml(errorMessage)}</div>
+              ${errorStack ? `<pre class="job-detail-pre">${escapeHtml(errorStack)}</pre>` : ""}
+            </div>`
+          : '<p class="job-detail-empty">没有错误信息</p>';
+
+        const logs = Array.isArray(job && job.logs) ? job.logs : [];
+        const logsText = logs
+          .map((line) => `[${formatClock(line.at)}] ${line.text}`)
+          .join("\n");
+        const logsHtml = logs.length
+          ? `<pre class="job-detail-pre job-detail-logs" id="job-detail-logs">${escapeHtml(logsText)}</pre>`
+          : '<p class="job-detail-empty">没有日志记录（早于本功能的运行不含日志）</p>';
+
+        const drafts = Array.isArray(job && job.drafts) ? job.drafts : [];
+        const draftsHtml = drafts.length
+          ? `<ul class="job-detail-drafts">${
+            drafts.map((draft) =>
+              `<li><strong>${escapeHtml(draft.title || "(无标题)")}</strong><span>${
+                escapeHtml(draft.status || "")
+              }</span><span>${formatTime(draft.createdAt)}</span></li>`
+            ).join("")
+          }</ul>
+          <p class="job-detail-hint">草稿正文在 <a href="publish.html">发布中心</a> 查看</p>`
+          : '<p class="job-detail-empty">本次运行没有产出草稿</p>';
+
+        const kv = `<div class="job-detail-kv">
+          <div><span>开始时间</span>${escapeHtml(formatTime(startedAt))}</div>
+          <div><span>结束时间</span>${escapeHtml(finishedAt ? formatTime(finishedAt) : "-")}</div>
+          <div><span>JobId</span><code>${escapeHtml((job && job.id) || "-")}</code></div>
+          <div><span>工作流</span>${escapeHtml((job && job.type) || "-")}</div>
+        </div>`;
+
+        jobDetailBody.innerHTML = [
+          detailSection("概览", kv),
+          renderSteps(job),
+          detailSection("失败详情", errorHtml),
+          detailSection("参数", payloadHtml),
+          detailSection("日志", logsHtml),
+          detailSection("产出", draftsHtml),
+        ].join("");
+
+        const logsEl = document.getElementById("job-detail-logs");
+        if (logsEl) {
+          logsEl.scrollTop = logsEl.scrollHeight;
+        }
+      };
+
+      const renderJobDetailError = (jobId, error) => {
+        if (!jobDetailBody) return;
+        const status = error && typeof error === "object" ? error.status : null;
+        const message = status === 404
+          ? "任务记录不存在（服务已重启，且这条记录没有落盘）"
+          : "读取运行详情失败";
+        // 头部也要跟着换成当前这条，否则会留着上一条任务的信息（误导）
+        if (jobDetailSub) {
+          jobDetailSub.innerHTML = `
+            <span class="status-pill ${statusClass("error")}">不可用</span>
+            <code>${escapeHtml(jobId)}</code>`;
+        }
+        jobDetailBody.innerHTML = detailSection(
+          "概览",
+          `<div class="job-detail-kv"><div><span>JobId</span><code>${
+            escapeHtml(jobId)
+          }</code></div><div><span>状态</span>不可用</div></div>
+          <p class="job-detail-empty">${escapeHtml(message)}</p>`,
+        );
+      };
+
+      const stopJobDetailPolling = () => {
+        if (jobDetailTimer) {
+          window.clearInterval(jobDetailTimer);
+          jobDetailTimer = null;
+        }
+      };
+
+      const closeJobDetail = () => {
+        stopJobDetailPolling();
+        jobDetailJobId = "";
+        if (jobDetailMask) {
+          jobDetailMask.classList.add("hidden");
+        }
+      };
+
+      const loadJobDetail = async (jobId) => {
+        try {
+          const job = await fetchJobStatus(jobId);
+          if (jobDetailJobId !== jobId) return false;
+          renderJobDetail(job);
+          if (job.status !== "running") {
+            stopJobDetailPolling();
+          }
+          return true;
+        } catch (error) {
+          if (jobDetailJobId !== jobId) return false;
+          renderJobDetailError(jobId, error);
+          stopJobDetailPolling();
+          return true;
+        }
+      };
+
+      const openJobDetail = async (jobId) => {
+        if (!jobId || !jobDetailMask) return;
+        stopJobDetailPolling();
+        jobDetailJobId = jobId;
+        jobDetailMask.classList.remove("hidden");
+        // 先把头部改成本条，避免残留上一条任务的状态/JobId
+        if (jobDetailSub) {
+          jobDetailSub.innerHTML = `
+            <span class="status-pill ${statusClass("unknown")}">加载中</span>
+            <code>${escapeHtml(jobId)}</code>`;
+        }
+        if (jobDetailBody) {
+          jobDetailBody.innerHTML = '<p class="job-detail-empty">加载中…</p>';
+        }
+        await loadJobDetail(jobId);
+        // 还在跑的任务，抽屉开着时继续刷新
+        if (jobDetailJobId === jobId && !jobDetailMask.classList.contains("hidden")) {
+          stopJobDetailPolling();
+          jobDetailTimer = window.setInterval(() => {
+            if (jobDetailJobId) loadJobDetail(jobDetailJobId);
+          }, 2000);
+        }
+      };
+
+      jobDetailClose?.addEventListener("click", closeJobDetail);
+      jobDetailRefresh?.addEventListener("click", () => {
+        if (jobDetailJobId) loadJobDetail(jobDetailJobId);
+      });
+      jobDetailMask?.addEventListener("click", (event) => {
+        if (event.target === jobDetailMask) closeJobDetail();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && jobDetailMask &&
+            !jobDetailMask.classList.contains("hidden")) {
+          closeJobDetail();
+        }
+      });
+
+      /* ---------------------------------------------- 幽灵"运行中"记录 */
+      // 列表里非当前轮询的记录不会被刷新，服务重启后可能永远停在"运行中"。
+      // 定期把这些记录各查一次（串行，避免打爆后端）：查到终态就更新，404 就标为失败。
+      let pollTickCount = 0;
+      let staleRefreshRunning = false;
+
+      const refreshStaleRunningJobs = async () => {
+        if (staleRefreshRunning) return;
+        const activelyPolled = pollingJobId && !pollingPaused ? pollingJobId : "";
+        const targets = readRecentJobs().filter((item) =>
+          item && item.jobId && item.status === "running" && item.jobId !== activelyPolled
+        );
+        if (!targets.length) return;
+        staleRefreshRunning = true;
+        try {
+          for (const item of targets) {
+            try {
+              const job = await fetchJobStatus(item.jobId);
+              upsertRecentJob({
+                jobId: item.jobId,
+                type: job.type,
+                status: job.status,
+                startedAt: job.startedAt,
+                finishedAt: job.finishedAt,
+                message: job.message,
+              });
+            } catch (error) {
+              const status = error && typeof error === "object" ? error.status : null;
+              if (status === 404) {
+                upsertRecentJob({
+                  jobId: item.jobId,
+                  status: "error",
+                  finishedAt: Date.now(),
+                  message: "任务记录不存在（服务已重启）",
+                });
+              }
+            }
+          }
+          renderRecentJobs();
+        } finally {
+          staleRefreshRunning = false;
+        }
+      };
+
+      const defaultSettings = () => ({
+        core: {
+          article: {
+            sourceType: "all",
+            maxArticles: 20,
+            publish: false,
+            heatWeight: 0.3,
+            qualityWeight: 0.7,
+            templates: ["modern.ejs", "tech.ejs"],
+            output: "html-weixin",
+          },
+          hellogithub: { maxItems: 10, publish: false },
+          aibench: { publish: false },
+        },
+        run: {
+          workflowType: "",
+          sourceType: "all",
+          maxArticles: null,
+          maxItems: null,
+          publish: false,
+          publishMode: "immediate",
+        },
+      });
+
+      let currentSettings = defaultSettings();
+      let dirty = false;
+
+      const markDirty = (next) => {
+        dirty = next;
+        syncWorkflowState();
+      };
+
+      const getEl = (id) => document.getElementById(id);
+      const hasTypeSelected = () => Boolean(getEl("workflow-type").value);
+
+      if (jobListEl) {
+        jobListEl.addEventListener("click", async (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          const button = target.closest("button");
+          if (!button) return;
+          const action = button.dataset.action;
+          const id = button.dataset.id;
+          if (!action || !id) return;
+          if (action === "view") {
+            startPolling(id);
+            openJobDetail(id);
+            return;
+          }
+          if (action === "copy") {
+            try {
+              await navigator.clipboard.writeText(id);
+              showToast("已复制 JobId");
+            } catch {
+              showToast("复制失败");
+            }
+          }
+        });
+      }
+
+      jobRefreshButton?.addEventListener("click", async () => {
+        const id = getActiveJobId();
+        if (!id) {
+          showToast("暂无任务");
+          return;
+        }
+        try {
+          const job = await fetchJobStatus(id);
+          renderJobPanel(job);
+          upsertRecentJob({
+            jobId: job.id,
+            type: job.type,
+            status: job.status,
+            startedAt: job.startedAt,
+            finishedAt: job.finishedAt,
+            message: job.message,
+          });
+          renderRecentJobs();
+          showToast("状态已刷新");
+        } catch {
+          showToast("刷新失败");
+        }
+      });
+
+      jobStopButton?.addEventListener("click", () => {
+        if (!getActiveJobId()) {
+          showToast("暂无任务");
+          return;
+        }
+        pollingPaused = !pollingPaused;
+        if (jobStopButton) {
+          jobStopButton.textContent = pollingPaused ? "继续轮询" : "停止轮询";
+        }
+      });
+
+      jobCopyButton?.addEventListener("click", async () => {
+        const id = getActiveJobId();
+        if (!id) {
+          showToast("暂无任务");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(id);
+          showToast("已复制 JobId");
+        } catch {
+          showToast("复制失败");
+        }
+      });
+
+      const setWorkflowInputsDisabled = (disabled) => {
+        [
+          "workflow-source",
+          "workflow-max",
+          "workflow-max-items",
+          "workflow-publish-mode",
+          "core-article-max",
+          "core-heat",
+          "core-quality",
+          "core-templates",
+          "core-output",
+          "core-publish",
+        ].forEach((id) => {
+          const el = getEl(id);
+          if (el) el.disabled = disabled;
+        });
+      };
+
+      const syncFlowPreview = (type) => {
+        if (!flowTypePill || !flowDescSource || !flowDescScore || !flowDescRender ||
+          !flowDescPublish) {
+          return;
+        }
+        if (!type) {
+          flowTypePill.textContent = "请选择工作流类型";
+          flowDescSource.textContent = "请选择工作流类型";
+          flowDescScore.textContent = "请选择工作流类型";
+          flowDescRender.textContent = "请选择工作流类型";
+          flowDescPublish.textContent = "请选择工作流类型";
+          return;
+        }
+        if (type === "weixin-article") {
+          flowTypePill.textContent = "文章工作流";
+          flowDescSource.textContent = "来源：Firecrawl + Twitter + Twitter Cookie";
+          flowDescScore.textContent = "模型评分 + 热度加权";
+          flowDescRender.textContent = "模板：Modern / Tech";
+          flowDescPublish.textContent = "渠道：微信草稿箱";
+          return;
+        }
+        if (type === "weixin-hellogithub") {
+          flowTypePill.textContent = "HelloGitHub";
+          flowDescSource.textContent = "来源：HelloGitHub 期刊";
+          flowDescScore.textContent = "亮点筛选 + 标签整理";
+          flowDescRender.textContent = "模板：项目卡片";
+          flowDescPublish.textContent = "渠道：微信草稿箱";
+          return;
+        }
+        flowTypePill.textContent = "AI Bench";
+        flowDescSource.textContent = "来源：LiveBench + 评测榜";
+        flowDescScore.textContent = "指标归一 + 趋势计算";
+        flowDescRender.textContent = "模板：榜单摘要";
+        flowDescPublish.textContent = "渠道：微信草稿箱";
+      };
+
+      const syncWorkflowState = () => {
+        const hasType = hasTypeSelected();
+        const disableActions = isWorkflowActionsDisabled(hasType);
+        const disableInputs = isWorkflowInputsDisabled(hasType);
+        const typeValue = hasType ? getEl("workflow-type").value : "";
+        if (saveState) {
+          saveState.textContent = getWorkflowSaveStateText(hasType, dirty);
+        }
+        if (saveButton) {
+          saveButton.disabled = disableActions;
+          saveButton.textContent = disableActions ? "请选择工作流类型" : "保存配置";
+        }
+        if (runButton) {
+          runButton.disabled = disableActions || dirty;
+          if (disableActions) {
+            runButton.textContent = "请选择工作流类型";
+          } else if (dirty) {
+            runButton.textContent = "请先保存配置";
+          } else {
+            runButton.textContent = "运行工作流";
+          }
+        }
+        if (disableInputs) {
+          setWorkflowInputsDisabled(true);
+        } else {
+          setWorkflowInputsDisabled(false);
+          applyTypeGuard();
+        }
+        syncFlowPreview(typeValue);
+      };
+
+      const fillUI = (settings) => {
+        getEl("workflow-type").value = settings.run.workflowType || "";
+        getEl("workflow-source").value = settings.run.sourceType || "all";
+        getEl("workflow-max").value = settings.run.maxArticles ?? "";
+        getEl("workflow-max-items").value = settings.run.maxItems ?? "";
+        getEl("workflow-publish-mode").value = settings.run.publishMode || "immediate";
+
+        getEl("core-article-max").value = settings.core.article.maxArticles ?? 20;
+        getEl("core-heat").value = settings.core.article.heatWeight ?? 0.3;
+        getEl("core-quality").value = settings.core.article.qualityWeight ?? 0.7;
+        getEl("core-templates").value = (settings.core.article.templates || []).join(", ");
+        getEl("core-output").value = settings.core.article.output || "html-weixin";
+        getEl("core-publish").value = String(Boolean(settings.core.article.publish));
+
+        markDirty(false);
+        syncWorkflowState();
+      };
+
+      const collectUI = () => {
+        const next = defaultSettings();
+
+        const runType = getEl("workflow-type").value || "";
+        const runSource = getEl("workflow-source").value || "all";
+        const runMax = getEl("workflow-max").value;
+        const runMaxItems = getEl("workflow-max-items").value;
+        const runPublishMode = getEl("workflow-publish-mode").value || "immediate";
+
+        next.run.workflowType = runType;
+        next.run.sourceType = runSource;
+        next.run.maxArticles = runMax ? Number(runMax) : null;
+        next.run.maxItems = runMaxItems ? Number(runMaxItems) : null;
+        next.run.publishMode = runPublishMode;
+
+        const coreMax = getEl("core-article-max").value;
+        const coreHeat = getEl("core-heat").value;
+        const coreQuality = getEl("core-quality").value;
+        const coreTemplates = getEl("core-templates").value;
+        const coreOutput = getEl("core-output").value;
+        const corePublish = getEl("core-publish").value;
+
+        next.core.article.maxArticles = coreMax ? Number(coreMax) : 20;
+        next.core.article.heatWeight = coreHeat ? Number(coreHeat) : 0.3;
+        next.core.article.qualityWeight = coreQuality ? Number(coreQuality) : 0.7;
+        next.core.article.templates = String(coreTemplates || "")
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean);
+        next.core.article.output = coreOutput || "html-weixin";
+        next.core.article.publish = corePublish === "true";
+
+        return next;
+      };
+
+      const applyTypeGuard = () => {
+        const typeEl = getEl("workflow-type");
+        const type = typeEl && typeEl.value ? typeEl.value : "";
+        const isArticle = type === "weixin-article";
+        const isHello = type === "weixin-hellogithub";
+        getEl("workflow-source").disabled = !isArticle;
+        getEl("workflow-max").disabled = !isArticle;
+        getEl("workflow-max-items").disabled = !isHello;
+      };
+
+      const attachDirtyListeners = () => {
+        [
+          "workflow-type",
+          "workflow-source",
+          "workflow-max",
+          "workflow-max-items",
+          "workflow-publish-mode",
+          "core-article-max",
+          "core-heat",
+          "core-quality",
+          "core-templates",
+          "core-output",
+          "core-publish",
+        ].forEach((id) => {
+          const el = getEl(id);
+          if (!el) return;
+          el.addEventListener("input", () => markDirty(true));
+          el.addEventListener("change", () => {
+            markDirty(true);
+            if (id === "workflow-type") {
+              syncWorkflowState();
+            }
+          });
+        });
+      };
+
+      const getEffectivePayload = (settings) => {
+        const type = settings.run.workflowType;
+        if (type === "weixin-article") {
+          const sourceType = settings.run.sourceType || settings.core.article.sourceType;
+          const maxArticles = settings.run.maxArticles ?? settings.core.article.maxArticles;
+          const publishMode = settings.run.publishMode || "immediate";
+          const publish = publishMode === "draft"
+            ? false
+            : (settings.run.publish ?? settings.core.article.publish);
+          return {
+            type,
+            payload: {
+              sourceType,
+              maxArticles,
+              publish,
+              publishMode,
+              heatWeight: settings.core.article.heatWeight,
+              qualityWeight: settings.core.article.qualityWeight,
+              templates: settings.core.article.templates,
+              output: settings.core.article.output,
+            },
+          };
+        }
+        if (type === "weixin-hellogithub") {
+          const maxItems = settings.run.maxItems ?? settings.core.hellogithub.maxItems;
+          const publishMode = settings.run.publishMode || "immediate";
+          const publish = publishMode === "draft"
+            ? false
+            : (settings.run.publish ?? settings.core.hellogithub.publish);
+          return { type, payload: { maxItems, publish, publishMode } };
+        }
+        const publishMode = settings.run.publishMode || "immediate";
+        const publish = publishMode === "draft"
+          ? false
+          : (settings.run.publish ?? settings.core.aibench.publish);
+        return { type, payload: { publish, publishMode } };
+      };
+
+      const loadSettings = async () => {
+        try {
+          const resp = await fetch(`${apiBase}/api/workflow-settings`);
+          if (!resp.ok) {
+            fillUI(currentSettings);
+            return;
+          }
+          const saved = await resp.json();
+          const base = defaultSettings();
+          currentSettings = {
+            core: {
+              ...base.core,
+              ...(saved.core || {}),
+              article: { ...base.core.article, ...((saved.core || {}).article || {}) },
+              hellogithub: {
+                ...base.core.hellogithub,
+                ...((saved.core || {}).hellogithub || {}),
+              },
+              aibench: { ...base.core.aibench, ...((saved.core || {}).aibench || {}) },
+            },
+            run: { ...base.run, ...(saved.run || {}) },
+          };
+          fillUI(currentSettings);
+        } catch {
+          fillUI(currentSettings);
+        }
+      };
+
+      if (saveButton) {
+        saveButton.addEventListener("click", async () => {
+          if (!hasTypeSelected()) {
+            showToast("请先选择工作流类型");
+            return;
+          }
+          saveButton.classList.add("loading");
+          try {
+            const next = collectUI();
+            const resp = await fetch(`${apiBase}/api/workflow-settings`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(next),
+            });
+            if (!resp.ok) throw new Error("save failed");
+            currentSettings = next;
+            markDirty(false);
+            showToast("配置已保存");
+          } catch {
+            showToast("保存失败");
+          } finally {
+            saveButton.classList.remove("loading");
+          }
+        });
+      }
+
+      if (runButton) {
+        runButton.addEventListener("click", async () => {
+          if (!hasTypeSelected()) {
+            showToast("请先选择工作流类型");
+            return;
+          }
+          if (dirty) {
+            showToast("请先保存配置");
+            return;
+          }
+          runButton.classList.add("loading");
+          try {
+            const next = collectUI();
+            const { type, payload } = getEffectivePayload(next);
+            const response = await fetch(`${apiBase}/api/workflows/run`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ type, payload }),
+            });
+            if (!response.ok) {
+              throw new Error("workflow failed");
+            }
+            const data = await response.json();
+            const jobId = data && data.jobId ? String(data.jobId) : "";
+            if (jobId) {
+              upsertRecentJob({ jobId, type, status: "running", startedAt: Date.now() });
+              renderRecentJobs();
+              startPolling(jobId);
+            }
+            showToast("工作流已触发");
+          } catch {
+            showToast("工作流触发失败");
+          } finally {
+            runButton.classList.remove("loading");
+          }
+        });
+      }
+
+      attachDirtyListeners();
+      loadSettings();
+      renderRecentJobs();
+      refreshStaleRunningJobs();
+      const lastActive = getActiveJobId();
+      if (lastActive) {
+        startPolling(lastActive);
+      } else {
+        renderJobPanel(null);
+      }
+    </script>
+  </body>
+</html>

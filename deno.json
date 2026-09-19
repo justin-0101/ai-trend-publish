@@ -1,0 +1,44 @@
+{
+  "tasks": {
+    "start": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
+    "web": "deno run --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
+    "web:dev": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
+    "prod": "deno task web",
+    "production": "deno task web",
+    "test": "deno run --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --env src/test.ts",
+    "test:simple": "deno run --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --env src/test-simple.ts",
+    "test:publish": "deno run --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --env src/test-publish.ts",
+    "build:win": "deno compile --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --target x86_64-pc-windows-msvc --output trendFinder.exe --icon ./docs/images/main.ico --include src/modules/render/templates src/test.ts --no-check",
+    "build:mac-x64": "deno compile --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --target x86_64-apple-darwin --output trendFinder-mac-x64 --include src/modules/render/templates src/test.ts --no-check",
+    "build:mac-arm64": "deno compile --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --target aarch64-apple-darwin --output trendFinder-mac-arm64 --include src/modules/render/templates src/test.ts --no-check",
+    "build:linux-x64": "deno compile --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --target x86_64-unknown-linux-gnu --output trendFinder-linux-x64 --include src/modules/render/templates src/test.ts --no-check",
+    "build:linux-arm64": "deno compile --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --target aarch64-unknown-linux-gnu --output trendFinder-linux-arm64 --include src/modules/render/templates src/test.ts --no-check",
+    "build:all": "deno task build:win && deno task build:mac-x64 && deno task build:mac-arm64 && deno task build:linux-x64 && deno task build:linux-arm64",
+    "build:docs": "deno run --allow-all scripts/md2html.ts"
+  },
+  "imports": {
+    "@deno-library/progress": "jsr:@deno-library/progress@^1.5.1",
+    "@std/assert": "jsr:@std/assert@1",
+    "@src/": "./src/",
+    "@zilla/logger": "jsr:@zilla/logger@^1.0.1",
+    "@sapling/markdown": "https://deno.land/x/sapling_markdown@v1.0.0/mod.ts"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "public",
+    "**/*.ejs"
+  ],
+  "lint": {
+    "exclude": [
+      "src/templates"
+    ],
+    "rules": {
+      "exclude": [
+        "no-explicit-any",
+        "require-await"
+      ]
+    }
+  }
+}

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 采集源</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .run-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f6c859, #ffda7b);
+        color: #2d1a00;
+        font-weight: 600;
+        border: none;
+        box-shadow: 0 12px 24px rgba(246, 200, 89, 0.35);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .run-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 8px 18px rgba(246, 200, 89, 0.28);
+      }
+
+      .run-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .config-panel {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .config-title {
+        font-size: 13px;
+        color: #fbd88a;
+        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle input {
+        accent-color: #f6c859;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .sources {
+        grid-column: span 5;
+        display: grid;
+        gap: 12px;
+      }
+
+      .source-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      }
+
+      .source-row:hover {
+        transform: translateY(-1px);
+        border-color: rgba(246, 200, 89, 0.25);
+      }
+
+      .source-row.active {
+        border-color: rgba(246, 200, 89, 0.45);
+        background: rgba(246, 200, 89, 0.08);
+      }
+
+      .tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: rgba(110, 231, 183, 0.15);
+        color: #b7f3d9;
+      }
+
+      .muted {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .config {
+        grid-column: span 7;
+        display: grid;
+        gap: 12px;
+      }
+
+      .config-row {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .config-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .config-row input,
+      .config-row select,
+      .config-row textarea {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+      }
+
+      .config-row textarea {
+        min-height: 72px;
+        resize: vertical;
+      }
+
+      .config-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .btn-secondary {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .results {
+        grid-column: span 12;
+      }
+
+      .result-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .result-item {
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .toast {
+        position: fixed;
+        right: 26px;
+        bottom: 26px;
+        background: rgba(26, 31, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        font-size: 12px;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item active" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>采集策略</h4>
+          <p>当前启用 3 个来源，平均 30 分钟刷新</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div class="search">搜索来源或规则</div>
+          <div class="top-actions">
+            <div class="pill">启用中 3</div>
+            <button class="run-btn" id="run-sources" type="button">试跑选中源</button>
+          </div>
+        </div>
+        <section class="grid">
+          <div class="panel sources">
+            <div class="panel-title">
+              <h3>采集源列表</h3>
+              <span class="pill">可编辑</span>
+            </div>
+            <div id="source-list"></div>
+          </div>
+          <div class="panel config">
+            <div class="panel-title">
+              <h3>规则配置</h3>
+              <span class="pill" id="selected-source">未选择</span>
+            </div>
+            <div class="muted" id="source-hint">请先选择左侧采集源</div>
+            <div class="config-row">
+              <strong>抓取频率(分钟)</strong>
+              <input id="rule-frequency" type="number" min="1" max="1440" placeholder="例如 30">
+            </div>
+            <div class="config-row">
+              <strong>包含关键词</strong>
+              <textarea id="rule-include" placeholder="一行一个关键词（为空表示不限制）"></textarea>
+            </div>
+            <div class="config-row">
+              <strong>排除关键词</strong>
+              <textarea id="rule-exclude" placeholder="一行一个关键词（命中即过滤）"></textarea>
+            </div>
+            <div class="config-row">
+              <strong>内容权重</strong>
+              <input id="rule-weight" type="number" min="0" max="5" step="0.1" placeholder="例如 1.0">
+            </div>
+            <div class="config-row">
+              <strong>最大入选</strong>
+              <input id="rule-max" type="number" min="1" max="50" placeholder="例如 10">
+            </div>
+            <div class="config-row">
+              <strong>同步发布</strong>
+              <select id="rule-publish">
+                <option value="false">否</option>
+                <option value="true">是</option>
+              </select>
+            </div>
+            <div class="config-actions">
+              <button class="btn-secondary" id="reset-rule" type="button">重置</button>
+              <button class="run-btn" id="save-rule" type="button">保存配置</button>
+            </div>
+          </div>
+          <div class="panel results">
+            <div class="panel-title">
+              <h3>试跑结果</h3>
+              <span class="pill">最近 10 条</span>
+            </div>
+            <div class="result-list">
+              <div class="result-item">
+                <strong>OpenAI 新模型评测榜单更新</strong>
+                <span>评分 92 · 1 分钟前</span>
+              </div>
+              <div class="result-item">
+                <strong>高性能向量数据库对比</strong>
+                <span>评分 88 · 4 分钟前</span>
+              </div>
+              <div class="result-item">
+                <strong>AI Agent 任务路由实践</strong>
+                <span>评分 84 · 6 分钟前</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script type="module">
+      import {
+        getSourceHeaderText,
+        isSourceFormDisabled,
+        isSourceRunDisabled,
+      } from "./js/flow-helpers.js";
+      var toast = document.getElementById("toast");
+
+      function showToast(message) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(function () {
+          toast.classList.remove("show");
+        }, 1800);
+      }
+
+      var apiBase = (window.location.protocol === "http:" ||
+          window.location.protocol === "https:")
+        ? ""
+        : "http://localhost:8787";
+
+      function defaultRule() {
+        return {
+          frequencyMinutes: 30,
+          includeKeywords: [],
+          excludeKeywords: [],
+          priorityWeight: 1,
+          maxArticles: 10,
+          publish: false,
+        };
+      }
+
+      function parseLines(text) {
+        var raw = String(text || "");
+        var parts = raw.split("\n");
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+          var v = String(parts[i]).replace(/^\s+|\s+$/g, "");
+          if (v) out.push(v);
+        }
+        return out;
+      }
+
+      function setFormDisabled(disabled) {
+        var ids = [
+          "rule-frequency",
+          "rule-include",
+          "rule-exclude",
+          "rule-weight",
+          "rule-max",
+          "rule-publish",
+          "save-rule",
+          "reset-rule",
+        ];
+        for (var i = 0; i < ids.length; i++) {
+          var el = document.getElementById(ids[i]);
+          if (el) el.disabled = disabled;
+        }
+      }
+
+      var selectedLabel = document.getElementById("selected-source");
+      var sourceHint = document.getElementById("source-hint");
+      var listEl = document.getElementById("source-list");
+      var runButton = document.getElementById("run-sources");
+      var saveButton = document.getElementById("save-rule");
+      var resetButton = document.getElementById("reset-rule");
+
+      var sources = [];
+      var selected = null;
+      var lastSavedRule = null;
+      var dirty = false;
+
+      function setSelectedText() {
+        if (!selectedLabel) return;
+        selectedLabel.textContent = getSourceHeaderText(selected, dirty);
+      }
+
+      function syncSourceActions() {
+        if (sourceHint) {
+          if (!selected) {
+            sourceHint.textContent = "请先选择左侧采集源";
+          } else if (dirty) {
+            sourceHint.textContent = "当前修改未保存";
+          } else {
+            sourceHint.textContent = "配置已保存，可试跑";
+          }
+        }
+        setFormDisabled(isSourceFormDisabled(selected));
+        if (runButton) {
+          runButton.disabled = isSourceRunDisabled(selected, dirty);
+          if (!selected) {
+            runButton.textContent = "请先选择采集源";
+          } else if (dirty) {
+            runButton.textContent = "请先保存配置";
+          } else {
+            runButton.textContent = "试跑选中源";
+          }
+        }
+      }
+
+      function markDirty(next) {
+        dirty = next;
+        setSelectedText();
+        syncSourceActions();
+      }
+
+      function fillForm(rule) {
+        var r = rule || defaultRule();
+        var frequency = document.getElementById("rule-frequency");
+        var include = document.getElementById("rule-include");
+        var exclude = document.getElementById("rule-exclude");
+        var weight = document.getElementById("rule-weight");
+        var max = document.getElementById("rule-max");
+        var publish = document.getElementById("rule-publish");
+        if (frequency) frequency.value = r.frequencyMinutes != null ? r.frequencyMinutes : "";
+        if (include) include.value = (r.includeKeywords || []).join("\n");
+        if (exclude) exclude.value = (r.excludeKeywords || []).join("\n");
+        if (weight) weight.value = r.priorityWeight != null ? r.priorityWeight : 1;
+        if (max) max.value = r.maxArticles != null ? r.maxArticles : "";
+        if (publish) publish.value = String(Boolean(r.publish));
+        markDirty(false);
+      }
+
+      function collectRule() {
+        var frequencyEl = document.getElementById("rule-frequency");
+        var includeEl = document.getElementById("rule-include");
+        var excludeEl = document.getElementById("rule-exclude");
+        var weightEl = document.getElementById("rule-weight");
+        var maxEl = document.getElementById("rule-max");
+        var publishEl = document.getElementById("rule-publish");
+
+        var frequency = frequencyEl ? frequencyEl.value : "";
+        var include = includeEl ? includeEl.value : "";
+        var exclude = excludeEl ? excludeEl.value : "";
+        var weight = weightEl ? weightEl.value : "";
+        var max = maxEl ? maxEl.value : "";
+        var publish = publishEl ? publishEl.value : "false";
+
+        return {
+          frequencyMinutes: frequency ? Number(frequency) : null,
+          includeKeywords: parseLines(include),
+          excludeKeywords: parseLines(exclude),
+          priorityWeight: weight ? Number(weight) : 1,
+          maxArticles: max ? Number(max) : null,
+          publish: publish === "true",
+        };
+      }
+
+      function attachDirtyListeners() {
+        var ids = [
+          "rule-frequency",
+          "rule-include",
+          "rule-exclude",
+          "rule-weight",
+          "rule-max",
+          "rule-publish",
+        ];
+        for (var i = 0; i < ids.length; i++) {
+          (function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener("input", function () {
+              markDirty(true);
+            });
+            el.addEventListener("change", function () {
+              markDirty(true);
+            });
+          })(ids[i]);
+        }
+      }
+
+      function fetchRule(platform, identifier) {
+        var url = apiBase + "/api/data-source-rules?platform=" +
+          encodeURIComponent(platform) + "&identifier=" + encodeURIComponent(identifier);
+        return fetch(url).then(function (resp) {
+          if (!resp.ok) return null;
+          return resp.json().then(function (data) {
+            return data.rules;
+          });
+        }).catch(function () {
+          return null;
+        });
+      }
+
+      function formatSource(item) {
+        var platform = String(item.platform || "");
+        var identifier = String(item.identifier || "");
+        if (platform === "firecrawl") {
+          if (identifier.indexOf("news.ycombinator.com") >= 0) {
+            return { title: "Firecrawl / HN", desc: "抓取今日热榜" };
+          }
+          return { title: "Firecrawl", desc: identifier };
+        }
+        if (platform === "twitter") {
+          var match = identifier.match(/x\.com\/(.+?)(\?|$|\/)/);
+          var handle = (match && match[1]) ? match[1] : identifier;
+          return { title: "Twitter / " + handle, desc: "24h 过滤" };
+        }
+        if (platform === "twitter-cookie") {
+          var match = identifier.match(/x\.com\/(.+?)(\?|$|\/)/);
+          var handle = (match && match[1]) ? match[1] : identifier;
+          return { title: "Twitter Cookie / " + handle, desc: "Cookie 抓取" };
+        }
+        return { title: platform, desc: identifier };
+      }
+
+      function renderSources() {
+        if (!listEl) return;
+        listEl.innerHTML = "";
+        if (!sources.length) {
+          var empty = document.createElement("div");
+          empty.className = "muted";
+          empty.style.padding = "8px 2px";
+          empty.textContent = "暂无采集源（请检查后端 /api/data-sources）";
+          listEl.appendChild(empty);
+          return;
+        }
+        for (var i = 0; i < sources.length; i++) {
+          (function (item) {
+            var row = document.createElement("div");
+            row.className = "source-row";
+            row.dataset.id = item.id;
+            var left = document.createElement("div");
+            var title = document.createElement("strong");
+            var formatted = formatSource(item);
+            title.textContent = formatted.title;
+            var desc = document.createElement("div");
+            desc.className = "muted";
+            desc.textContent = formatted.desc;
+            left.appendChild(title);
+            left.appendChild(desc);
+            var tag = document.createElement("span");
+            tag.className = "tag";
+            tag.textContent = "启用";
+            row.appendChild(left);
+            row.appendChild(tag);
+            row.addEventListener("click", function () {
+              if (dirty) {
+                showToast("请先保存当前修改");
+                return;
+              }
+              selectSource(item);
+            });
+            listEl.appendChild(row);
+          })(sources[i]);
+        }
+      }
+
+      function highlightSelected() {
+        if (!listEl || !selected) return;
+        var rows = listEl.querySelectorAll(".source-row");
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          row.classList.toggle("active", row.dataset.id === selected.id);
+        }
+      }
+
+      function selectSource(item) {
+        selected = item;
+        highlightSelected();
+        setSelectedText();
+        syncSourceActions();
+        return fetchRule(item.platform, item.identifier).then(function (rules) {
+          lastSavedRule = rules || defaultRule();
+          fillForm(lastSavedRule);
+        });
+      }
+
+      function loadSources() {
+        syncSourceActions();
+        return fetch(apiBase + "/api/data-sources").then(function (resp) {
+          if (!resp.ok) {
+            showToast("加载采集源失败");
+            return null;
+          }
+          return resp.json();
+        }).then(function (data) {
+          if (!data) return;
+          sources = Array.isArray(data.sources) ? data.sources : [];
+          renderSources();
+          if (!sources.length) {
+            showToast("未发现采集源");
+            return null;
+          }
+          setSelectedText();
+          syncSourceActions();
+          showToast("请先选择采集源");
+          return null;
+        }).catch(function () {
+          showToast("加载采集源异常");
+          return null;
+        });
+      }
+
+      if (saveButton) {
+        saveButton.addEventListener("click", function () {
+          if (!selected) {
+            showToast("请先选择采集源");
+            return;
+          }
+          saveButton.classList.add("loading");
+          var rules = collectRule();
+          fetch(apiBase + "/api/data-source-rules", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              platform: selected.platform,
+              identifier: selected.identifier,
+              rules: rules,
+            }),
+          }).then(function (resp) {
+            if (!resp.ok) throw new Error("save failed");
+            lastSavedRule = rules;
+            fillForm(lastSavedRule);
+            showToast("配置已保存");
+          }).catch(function () {
+            showToast("保存失败");
+          }).finally(function () {
+            saveButton.classList.remove("loading");
+          });
+        });
+      }
+
+      if (resetButton) {
+        resetButton.addEventListener("click", function () {
+          if (!lastSavedRule) return;
+          fillForm(lastSavedRule);
+          showToast("已重置");
+        });
+      }
+
+      if (runButton) {
+        runButton.addEventListener("click", function () {
+          if (!selected) {
+            showToast("请先选择采集源");
+            return;
+          }
+          if (dirty) {
+            showToast("请先保存配置再试跑");
+            return;
+          }
+          runButton.classList.add("loading");
+          var r = lastSavedRule || defaultRule();
+          var payload = {
+            sourceType: selected.platform,
+            publish: Boolean(r.publish),
+            includeKeywords: r.includeKeywords || [],
+            excludeKeywords: r.excludeKeywords || [],
+          };
+          if (r.maxArticles != null) payload.maxArticles = r.maxArticles;
+          fetch(apiBase + "/api/workflows/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "weixin-article",
+              payload: payload,
+            }),
+          }).then(function (resp) {
+            if (!resp.ok) throw new Error("workflow failed");
+            showToast("试跑请求已触发");
+          }).catch(function () {
+            showToast("试跑触发失败");
+          }).finally(function () {
+            runButton.classList.remove("loading");
+          });
+        });
+      }
+
+      attachDirtyListeners();
+      loadSources();
+    </script>
+  </body>
+</html>

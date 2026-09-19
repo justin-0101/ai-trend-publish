@@ -1,0 +1,25 @@
+# <%= title %>
+
+<% items.forEach(item => { %>
+## <%= item.title %>
+
+<%- item.content %>
+
+<% if (item.url) { %>
+原文链接：[<%= item.url %>](<%= item.url %>)
+<% } %>
+
+<% if (item.author) { %>
+作者：<%= item.author %>
+<% } %>
+
+<% if (item.tags && item.tags.length > 0) { %>
+标签：<%= item.tags.join(', ') %>
+<% } %>
+
+---
+<% }); %>
+
+<% if (metadata && metadata.footer) { %>
+<%- metadata.footer %>
+<% } %>

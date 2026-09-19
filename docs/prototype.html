@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 工作台原型</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .run-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f6c859, #ffda7b);
+        color: #2d1a00;
+        font-weight: 600;
+        border: none;
+        box-shadow: 0 12px 24px rgba(246, 200, 89, 0.35);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .run-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 8px 18px rgba(246, 200, 89, 0.28);
+      }
+
+      .run-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .config-panel {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .config-title {
+        font-size: 13px;
+        color: #fbd88a;
+        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle input {
+        accent-color: #f6c859;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .kpi {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .kpi-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .kpi-card span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .kpi-card h2 {
+        margin: 6px 0 0;
+        font-size: 24px;
+        font-family: "Fraunces", serif;
+      }
+
+      .timeline {
+        grid-column: span 7;
+        display: grid;
+        gap: 12px;
+      }
+
+      .timeline-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 14px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: grid;
+        gap: 6px;
+      }
+
+      .timeline-item strong {
+        font-size: 13px;
+      }
+
+      .timeline-item span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sources {
+        grid-column: span 5;
+        display: grid;
+        gap: 12px;
+      }
+
+      .source-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: rgba(110, 231, 183, 0.15);
+        color: #b7f3d9;
+      }
+
+      .muted {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .preview {
+        grid-column: span 7;
+        background: linear-gradient(145deg, rgba(245, 240, 232, 0.95), rgba(233, 224, 211, 0.9));
+        color: #3a2d1f;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .preview h3 {
+        color: #3a2d1f;
+      }
+
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .preview-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        display: grid;
+        gap: 8px;
+      }
+
+      .preview-card h4 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .preview-card p {
+        margin: 0;
+        font-size: 12px;
+        color: #5a4b3a;
+      }
+
+      .publish {
+        grid-column: span 7;
+      }
+
+      .table {
+        width: 100%;
+        display: grid;
+        gap: 10px;
+      }
+
+      .table-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 0.8fr 0.6fr;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .table-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .status {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        text-align: center;
+      }
+
+      .status.ok {
+        background: rgba(110, 231, 183, 0.2);
+        color: #b7f3d9;
+      }
+
+      .status.warn {
+        background: rgba(244, 114, 182, 0.18);
+        color: #f9bddb;
+      }
+
+      .activity {
+        grid-column: span 5;
+        display: grid;
+        gap: 12px;
+      }
+
+      .activity-card {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .activity-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .activity-card span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .toast {
+        position: fixed;
+        right: 26px;
+        bottom: 26px;
+        background: rgba(26, 31, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        font-size: 12px;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item active" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>今日运行</h4>
+          <p>采集 4 源 → 入选 21 条 → 渲染 8 份 → 发布 2 次</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div class="search">搜索任务、来源、模板</div>
+          <div class="top-actions">
+            <div class="pill">环境：生产</div>
+            <div class="pill">运行中 1</div>
+          <button class="run-btn" id="run-overview" type="button">立即试跑</button>
+          </div>
+        </div>
+        <div class="config-panel">
+          <div class="config-title">试跑参数</div>
+          <div class="config-grid">
+            <label class="field">
+              来源类型
+              <select id="overview-source">
+                <option value="all">全部</option>
+                <option value="firecrawl">Firecrawl</option>
+                <option value="twitter">Twitter</option>
+              </select>
+            </label>
+            <label class="field">
+              最大入选
+              <input id="overview-max" type="number" min="1" max="50" placeholder="默认 10">
+            </label>
+            <label class="toggle">
+              <input id="overview-publish" type="checkbox">
+              同步发布
+            </label>
+          </div>
+        </div>
+        <section class="grid">
+          <div class="panel kpi">
+            <div class="kpi-card">
+              <span>今日采集</span>
+              <h2 id="kpi-collected">0</h2>
+            </div>
+            <div class="kpi-card">
+              <span>入选内容</span>
+              <h2 id="kpi-selected">0</h2>
+            </div>
+            <div class="kpi-card">
+              <span>成功发布</span>
+              <h2 id="kpi-published">0</h2>
+            </div>
+            <div class="kpi-card">
+              <span>异常任务</span>
+              <h2 id="kpi-errors">0</h2>
+            </div>
+          </div>
+          <div class="panel timeline">
+            <div class="panel-title">
+              <h3>任务时间轴</h3>
+              <span class="pill">今日</span>
+            </div>
+            <div id="timeline-list"></div>
+          </div>
+          <div class="panel activity">
+            <div class="panel-title">
+              <h3>任务日志</h3>
+              <span class="pill">最近</span>
+            </div>
+            <div id="activity-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+      const toast = document.getElementById("toast");
+
+      const showToast = (message) => {
+        if (!toast) {
+          return;
+        }
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1800);
+      };
+
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value;
+        }
+      };
+
+      const renderTimeline = (items) => {
+        const container = document.getElementById("timeline-list");
+        if (!container) {
+          return;
+        }
+        container.innerHTML = "";
+        items.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "timeline-item";
+          const title = document.createElement("strong");
+          title.textContent = item.title;
+          const detail = document.createElement("span");
+          detail.textContent = `${item.time} · ${item.detail}`;
+          card.appendChild(title);
+          card.appendChild(detail);
+          container.appendChild(card);
+        });
+      };
+
+      const renderActivity = (items) => {
+        const container = document.getElementById("activity-list");
+        if (!container) {
+          return;
+        }
+        container.innerHTML = "";
+        items.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "activity-card";
+          const title = document.createElement("strong");
+          title.textContent = item.title;
+          const detail = document.createElement("span");
+          detail.textContent = item.detail;
+          card.appendChild(title);
+          card.appendChild(detail);
+          container.appendChild(card);
+        });
+      };
+
+      const loadOverview = async () => {
+        try {
+          const button = document.getElementById("run-overview");
+          if (button) {
+            button.classList.add("loading");
+          }
+          const response = await fetch("/api/overview");
+          if (!response.ok) {
+            showToast("获取概览失败");
+            return;
+          }
+          const data = await response.json();
+          setText("kpi-collected", data.kpi.collected ?? 0);
+          setText("kpi-selected", data.kpi.selected ?? 0);
+          setText("kpi-published", data.kpi.published ?? 0);
+          setText("kpi-errors", data.kpi.errors ?? 0);
+          renderTimeline(data.timeline ?? []);
+          renderActivity(data.activity ?? []);
+          showToast("概览已更新");
+        } catch {
+          showToast("概览更新异常");
+        } finally {
+          const button = document.getElementById("run-overview");
+          if (button) {
+            button.classList.remove("loading");
+          }
+        }
+      };
+
+      const triggerWorkflow = async (type, payload) => {
+        const response = await fetch("/api/workflows/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, payload }),
+        });
+        if (!response.ok) {
+          throw new Error("workflow failed");
+        }
+        return await response.json();
+      };
+
+      const applyStored = (key, fallback) => {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      };
+
+      const setupOverviewConfig = () => {
+        const source = document.getElementById("overview-source");
+        const max = document.getElementById("overview-max");
+        const publish = document.getElementById("overview-publish");
+        if (!source || !max || !publish) {
+          return;
+        }
+        source.value = applyStored("tp.overview.source", "all");
+        max.value = applyStored("tp.overview.max", "");
+        publish.checked = applyStored("tp.overview.publish", "false") === "true";
+        source.addEventListener("change", () => {
+          window.localStorage.setItem("tp.overview.source", source.value);
+        });
+        max.addEventListener("input", () => {
+          window.localStorage.setItem("tp.overview.max", max.value);
+        });
+        publish.addEventListener("change", () => {
+          window.localStorage.setItem("tp.overview.publish", publish.checked ? "true" : "false");
+        });
+      };
+
+      const runButton = document.getElementById("run-overview");
+      if (runButton) {
+        runButton.addEventListener("click", async () => {
+          runButton.classList.add("loading");
+          try {
+            const source = document.getElementById("overview-source");
+            const max = document.getElementById("overview-max");
+            const publish = document.getElementById("overview-publish");
+            const payload = {
+              sourceType: source ? source.value : "all",
+              maxArticles: max && max.value ? Number(max.value) : undefined,
+              publish: publish ? publish.checked : false,
+            };
+            await triggerWorkflow("weixin-article", payload);
+            showToast("试跑已触发");
+            window.setTimeout(loadOverview, 800);
+          } catch {
+            showToast("触发失败");
+          } finally {
+            runButton.classList.remove("loading");
+          }
+        });
+      }
+
+      setupOverviewConfig();
+      loadOverview();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,121 @@
+# 启动 Web 控制面板（一键启动）
+
+## 最简单：双击
+
+双击项目根目录的：
+
+```text
+start-web.bat
+```
+
+脚本会自动完成：找 Deno → 解析端口 → 检查端口占用 → 启动服务 → 等就绪 → 打开浏览器。
+
+## PowerShell 方式
+
+```powershell
+.\start-web.ps1
+```
+
+可带参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `-Port 8010` | 指定端口（优先级：`-Port` > 环境变量 `UI_PORT` > `.env` 的 `UI_PORT` > 8002） |
+| `-Dev` | 开发模式，改文件自动重启（deno `--watch`） |
+| `-NoBrowser` | 启动后不自动打开浏览器 |
+| `-Stop` | 停止占用该端口的服务 |
+| `-InstallDeno` | 没装 Deno 时用 winget 自动安装 |
+
+示例：
+
+```powershell
+.\start-web.ps1 -Port 8010 -Dev      # 开发模式，端口 8010
+.\start-web.ps1 -NoBrowser           # 不打开浏览器
+.\start-web.ps1 -Stop                # 停止服务（默认端口）
+.\start-web.ps1 -Stop -Port 8010     # 停止指定端口上的服务
+```
+
+bat 同样支持透传参数：
+
+```bat
+start-web.bat -Dev
+start-web.bat -Stop
+```
+
+## 脚本行为说明
+
+1. **找 Deno**：依次找 `.deno\bin\deno.exe` → `%USERPROFILE%\.deno\bin\deno.exe` → PATH 里的 `deno` → winget 安装目录。都找不到会给出三种安装方式并退出。
+2. **端口占用**：
+   - 占用者是本服务（探测 `/api/overview` 返回 TrendPublish 概览结构）→ 直接提示"已经在运行"并打开浏览器；
+   - 占用者是别的程序 → 自动往后找空闲端口（最多试 20 个）并提示实际使用的端口。
+3. **配置检查**：找不到 `.env` 会提醒（首次使用请复制 `.env.example` 为 `.env` 并填密钥）。
+4. **本机探测绕过系统代理**：脚本用 `WebRequest` + `Proxy = $null` 探测 `127.0.0.1`，有 `HTTP_PROXY` 环境变量时也不会卡住。
+
+## 停止服务
+
+优先在启动窗口按：
+
+```text
+Ctrl+C
+```
+
+或另开一个窗口：
+
+```powershell
+.\start-web.ps1 -Stop
+```
+
+强制停止全部 deno 进程（慎用）：
+
+```powershell
+taskkill /f /im deno.exe
+```
+
+## Deno task 方式（等价，不含端口检查/自动开浏览器）
+
+```powershell
+deno task web          # 或 deno task production / deno task prod
+deno task web:dev      # 热重载
+```
+
+## 项目管理看板里的一键启动
+
+`F:\个人项目管理\_项目管理工具` 看板上，本项目的「启动」按钮配置为：
+
+```text
+command : .deno\bin\deno.exe run --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check
+kind    : direct      （不套 cmd.exe）
+port    : 8002
+url     : http://localhost:8002/
+```
+
+用 `direct` 而不是 `cmd` 的原因：看板用 `DETACHED_PROCESS` 拉起子进程，
+`cmd.exe /c deno.exe` 这种组合下 deno 拿不到有效 stdout，日志会全部丢失；
+`direct` 才能把输出写进 `_项目管理工具\_dev\logs\ai-trend-publish.log`。
+启动后点看板的「打开」进控制面板，「停止」会把 deno 一起收掉（taskkill /T）。
+看板按钮不会自动开浏览器，属于正常行为；想自动开浏览器就用上面的 `start-web.bat`。
+
+## 修改端口
+
+临时改（PowerShell）：
+
+```powershell
+$env:UI_PORT="8010"; .\start-web.ps1
+```
+
+或写进 `.env`：
+
+```env
+UI_PORT=8010
+```
+
+> 注意：环境变量 `UI_PORT` 优先级高于 `.env`；脚本内部会用解析出的端口覆盖该变量后再启动。
+
+## 常见问题
+
+| 现象 | 处理 |
+| --- | --- |
+| 提示"未检测到 Deno 运行时" | `.\start-web.ps1 -InstallDeno`，或 `winget install -e --id DenoLand.Deno`，或把 `deno.exe` 放到 `.deno\bin\deno.exe` |
+| 浏览器打不开页面 | 看启动窗口里的"访问地址"用的是哪个端口（端口被占用时会自动换端口） |
+| 页面能开但功能报错 | 检查 `.env` 里的数据库 / LLM 密钥配置 |
+| 端口一直被占用 | `.\start-web.ps1 -Stop -Port 端口号` |

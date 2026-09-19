@@ -1,0 +1,64 @@
+name: Deploy to Production # 部署到生产环境
+
+on:
+  push:
+    tags:
+      - "v*" # 当创建以v开头的tag时触发
+  workflow_dispatch: # 允许手动触发工作流
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest # 在最新版本的 Ubuntu 运行器上运行
+
+    steps:
+      - uses: actions/checkout@v4 # 检出代码
+
+      - name: Setup SSH # 设置 SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Check and Install Deno on Server # 检查并安装 Deno
+        run: |
+          ssh -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" '
+            if ! command -v deno &> /dev/null; then
+              echo "Installing Deno..."
+              curl -fsSL https://deno.land/x/install/install.sh | sh
+              echo "export DENO_INSTALL=\"\$HOME/.deno\"" >> ~/.bashrc
+              echo "export PATH=\"\$DENO_INSTALL/bin:\$PATH\"" >> ~/.bashrc
+              export DENO_INSTALL="$HOME/.deno"
+              export PATH="$DENO_INSTALL/bin:$PATH"
+            else
+              echo "Deno is already installed"
+              deno --version
+            fi
+          '
+
+      - name: Create .env file # 创建环境配置文件
+        run: |
+          cat > .env << EOL
+          # 数据库配置
+          ENABLE_DB=true
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_DATABASE=${{ secrets.DB_DATABASE }}
+          EOL
+
+      - name: Deploy to Server # 部署到服务器
+        run: |
+          # 确保目录存在
+          ssh -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "mkdir -p ~/app"
+
+          # 复制项目文件
+          scp -r -i ~/.ssh/id_rsa ./* "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/"
+          scp -i ~/.ssh/id_rsa .env "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/"
+
+          # 停止旧进程并启动新进程
+          ssh -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" "cd ~/app && \
+            export PATH=\"\$HOME/.deno/bin:\$PATH\" && \
+            pkill -f 'deno.*start' || true && \
+            nohup deno task start > trend-finder.log 2>&1 &"

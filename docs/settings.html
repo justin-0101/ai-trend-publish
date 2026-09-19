@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 系统设置</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .settings-grid {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .settings-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .settings-card strong {
+        display: block;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .toggle-row {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .toggle {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(110, 231, 183, 0.2);
+        color: #b7f3d9;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item active" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>系统状态</h4>
+          <p>环境变量已加载，数据库连接正常</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div class="search">搜索配置项</div>
+          <div class="top-actions">
+            <div class="pill">环境：生产</div>
+          </div>
+        </div>
+        <section class="grid">
+          <div class="panel settings-grid">
+            <div class="settings-card">
+              <strong>API Key</strong>
+              OpenAI / Xunfei / Firecrawl
+              <div class="toggle-row">
+                <span>已配置 3 项</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <strong>微信配置</strong>
+              AppID / Secret / 白名单
+              <div class="toggle-row">
+                <span>草稿箱可用</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <strong>数据存储</strong>
+              DB 连接 / 本地缓存
+              <div class="toggle-row">
+                <span>连接正常</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <strong>通知渠道</strong>
+              Bark / 钉钉 / 站内通知
+              <div class="toggle-row">
+                <span>已绑定 2 项</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <strong>运行模式</strong>
+              自动 / 手动 / 定时
+              <div class="toggle-row">
+                <span>当前：定时</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+            <div class="settings-card">
+              <strong>安全策略</strong>
+              IP 白名单 / Token 轮换
+              <div class="toggle-row">
+                <span>最近更新：1 天前</span>
+                <span class="toggle">启用</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 发布中心</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .run-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f6c859, #ffda7b);
+        color: #2d1a00;
+        font-weight: 600;
+        border: none;
+        box-shadow: 0 12px 24px rgba(246, 200, 89, 0.35);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .run-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 8px 18px rgba(246, 200, 89, 0.28);
+      }
+
+      .run-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .config-panel {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .config-title {
+        font-size: 13px;
+        color: #fbd88a;
+        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle input {
+        accent-color: #f6c859;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .platforms {
+        display: block;
+      }
+
+      .platform-grid {
+        display: flex;
+        gap: 12px;
+        align-items: stretch;
+        flex-wrap: nowrap;
+        gap: 12px;
+      }
+
+      .platform-card {
+        flex: 1 1 0;
+        min-width: 220px;
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .platform-card h4 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .platform-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 980px) {
+        .platform-grid {
+          flex-wrap: wrap;
+        }
+      }
+
+      .queue {
+        grid-column: span 12;
+      }
+
+      .retry {
+        grid-column: span 12;
+      }
+
+      .table {
+        width: 100%;
+        display: grid;
+        gap: 10px;
+      }
+
+      .table-row {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 0.8fr 0.6fr;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .table-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .draft-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .draft-row {
+        display: grid;
+        grid-template-columns: 1.4fr 0.8fr 0.6fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .draft-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .draft-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .ghost-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text);
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .ghost-btn:active {
+        transform: translateY(1px);
+      }
+
+      .draft-editor {
+        grid-column: span 12;
+      }
+
+      .editor-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .editor-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(7, 10, 15, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 20;
+      }
+
+      .modal-overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .modal {
+        width: min(860px, 92vw);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 14px;
+        max-height: 90vh;
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .modal-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .modal-close {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .field .draft-editor {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: var(--text);
+        font-size: 12px;
+        min-height: 220px;
+        max-height: 55vh;
+        overflow: auto;
+      }
+
+      .draft-empty {
+        color: var(--muted);
+        font-size: 12px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+      }
+
+      .status {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        text-align: center;
+      }
+
+      .status.ok {
+        background: rgba(110, 231, 183, 0.2);
+        color: #b7f3d9;
+      }
+
+      .status.warn {
+        background: rgba(244, 114, 182, 0.18);
+        color: #f9bddb;
+      }
+
+      .retry {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .retry-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .toast {
+        position: fixed;
+        right: 26px;
+        bottom: 26px;
+        background: rgba(26, 31, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        font-size: 12px;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item active" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>发布统计</h4>
+          <p>今日成功 2 次，失败 1 次，平均耗时 3 分钟</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="topbar">
+          <div class="search">搜索发布记录</div>
+          <div class="top-actions">
+            <div class="pill">草稿箱</div>
+            <button class="run-btn" id="run-publish" type="button">立即发布</button>
+          </div>
+        </div>
+        <div class="panel platforms">
+          <div class="panel-title">
+            <h3>平台状态</h3>
+            <span class="pill">已连接</span>
+          </div>
+          <div class="platform-grid">
+            <div class="platform-card">
+              <h4>微信公众号</h4>
+              <p>AppID 已绑定 · 草稿箱可用</p>
+            </div>
+            <div class="platform-card">
+              <h4>知乎</h4>
+              <p>认证中 · 需更新 token</p>
+            </div>
+            <div class="platform-card">
+              <h4>小红书</h4>
+              <p>暂未启用</p>
+            </div>
+          </div>
+        </div>
+        <div class="config-panel">
+          <div class="config-title">发布参数</div>
+          <div class="config-grid">
+            <label class="field">
+              来源类型
+              <select id="publish-source">
+                <option value="all">全部</option>
+                <option value="firecrawl">Firecrawl</option>
+                <option value="twitter">Twitter</option>
+                <option value="twitter-cookie">Twitter Cookie</option>
+              </select>
+            </label>
+            <label class="field">
+              最大入选
+              <input id="publish-max" type="number" min="1" max="50" placeholder="默认 10">
+            </label>
+            <label class="toggle">
+              <input id="publish-force" type="checkbox" checked>
+              强制发布
+            </label>
+          </div>
+        </div>
+        <section class="grid">
+          <div class="panel queue">
+            <div class="panel-title">
+              <h3>草稿箱</h3>
+              <span class="pill" id="draft-count">0</span>
+            </div>
+            <div class="draft-list" id="draft-list"></div>
+          </div>
+          <div class="panel retry">
+            <div class="retry-card">失败重试 · 选择失败条目一键重试</div>
+            <div class="retry-card">封面替换 · 素材库选择并重新上传</div>
+            <div class="retry-card">渠道切换 · 同步发布到其他平台</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="modal-overlay" id="draft-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">
+            <h3>草稿编辑</h3>
+            <span class="pill" id="draft-editor-status">未选择</span>
+          </div>
+          <button class="modal-close" id="draft-close" type="button">关闭</button>
+        </div>
+        <label class="field">
+          标题
+          <input id="draft-title" type="text" placeholder="请输入标题">
+        </label>
+        <label class="field">
+          内容
+          <div id="draft-html" class="draft-editor" contenteditable="true"></div>
+        </label>
+        <div class="editor-actions">
+          <button class="ghost-btn" id="draft-save" type="button">保存修改</button>
+          <button class="run-btn" id="draft-publish" type="button">立即发布</button>
+          <button class="ghost-btn" id="draft-delete" type="button">删除草稿</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+      const toast = document.getElementById("toast");
+
+      const showToast = (message) => {
+        if (!toast) {
+          return;
+        }
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1800);
+      };
+
+      const runButton = document.getElementById("run-publish");
+      if (runButton) {
+        runButton.addEventListener("click", async () => {
+          runButton.classList.add("loading");
+          try {
+            const source = document.getElementById("publish-source");
+            const max = document.getElementById("publish-max");
+            const force = document.getElementById("publish-force");
+            const response = await fetch("/api/workflows/run", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "weixin-article",
+                payload: {
+                  sourceType: source ? source.value : "all",
+                  maxArticles: max && max.value ? Number(max.value) : undefined,
+                  forcePublish: force ? force.checked : true,
+                  publish: true,
+                },
+              }),
+            });
+            if (!response.ok) {
+              throw new Error("workflow failed");
+            }
+            showToast("发布请求已触发");
+          } catch {
+            showToast("发布触发失败");
+          } finally {
+            runButton.classList.remove("loading");
+          }
+        });
+      }
+
+      const draftListEl = document.getElementById("draft-list");
+      const draftCountEl = document.getElementById("draft-count");
+      const draftTitleInput = document.getElementById("draft-title");
+      const draftHtmlInput = document.getElementById("draft-html");
+      const draftEditorStatus = document.getElementById("draft-editor-status");
+      const draftSaveButton = document.getElementById("draft-save");
+      const draftPublishButton = document.getElementById("draft-publish");
+      const draftDeleteButton = document.getElementById("draft-delete");
+      const draftModal = document.getElementById("draft-modal");
+      const draftCloseButton = document.getElementById("draft-close");
+
+      let currentDraftId = null;
+
+      const formatTime = (value) => {
+        if (!value) return "-";
+        return new Date(value).toLocaleString();
+      };
+
+      const renderDraftList = (drafts) => {
+        if (!draftListEl) return;
+        draftListEl.innerHTML = "";
+        if (!drafts || drafts.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "draft-empty";
+          empty.textContent = "暂无草稿，请先在工作流中选择保存到草稿箱";
+          draftListEl.appendChild(empty);
+          if (draftCountEl) {
+            draftCountEl.textContent = "0";
+          }
+          return;
+        }
+        if (draftCountEl) {
+          draftCountEl.textContent = String(drafts.length);
+        }
+        drafts.forEach((draft) => {
+          const row = document.createElement("div");
+          row.className = "draft-row";
+          const statusClass = draft.status === "published" ? "ok" : "warn";
+          const statusText = draft.status === "published" ? "已发布" : "草稿";
+          row.innerHTML = `
+            <strong>${draft.title || "未命名草稿"}</strong>
+            <span>${formatTime(draft.updatedAt || draft.createdAt)}</span>
+            <div class="status ${statusClass}">${statusText}</div>
+            <div class="draft-actions">
+              <button class="ghost-btn" data-action="edit" data-id="${draft.id}">编辑</button>
+              <button class="run-btn" data-action="publish" data-id="${draft.id}">发布</button>
+              <button class="ghost-btn" data-action="delete" data-id="${draft.id}">删除</button>
+            </div>
+          `;
+          draftListEl.appendChild(row);
+        });
+      };
+
+      const loadDrafts = async () => {
+        try {
+          const response = await fetch("/api/drafts");
+          if (!response.ok) {
+            renderDraftList([]);
+            return;
+          }
+          const data = await response.json();
+          renderDraftList(data.drafts || []);
+        } catch {
+          renderDraftList([]);
+        }
+      };
+
+      const setEditorDraft = (draft) => {
+        currentDraftId = draft?.id || null;
+        if (draftTitleInput) {
+          draftTitleInput.value = draft?.title || "";
+        }
+        if (draftHtmlInput) {
+          draftHtmlInput.innerHTML = draft?.html || "";
+        }
+        if (draftEditorStatus) {
+          draftEditorStatus.textContent = draft
+            ? draft.status === "published" ? "已发布" : "草稿"
+            : "未选择";
+        }
+        if (draftModal) {
+          draftModal.classList.add("show");
+        }
+      };
+
+      const loadDraftDetail = async (id) => {
+        try {
+          const response = await fetch(`/api/drafts/${id}`);
+          if (!response.ok) {
+            showToast("草稿不存在");
+            return;
+          }
+          const draft = await response.json();
+          setEditorDraft(draft);
+        } catch {
+          showToast("草稿读取失败");
+        }
+      };
+
+      const saveDraft = async () => {
+        if (!currentDraftId) {
+          showToast("请先选择草稿");
+          return;
+        }
+        const title = draftTitleInput ? draftTitleInput.value.trim() : "";
+        const html = draftHtmlInput ? draftHtmlInput.innerHTML : "";
+        if (!title || !html.trim()) {
+          showToast("标题或内容不能为空");
+          return;
+        }
+        draftSaveButton?.classList.add("loading");
+        try {
+          const response = await fetch(`/api/drafts/${currentDraftId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, html }),
+          });
+          if (!response.ok) {
+            throw new Error("save failed");
+          }
+          const draft = await response.json();
+          setEditorDraft(draft);
+          showToast("草稿已保存");
+          await loadDrafts();
+        } catch {
+          showToast("草稿保存失败");
+        } finally {
+          draftSaveButton?.classList.remove("loading");
+        }
+      };
+
+      const publishDraft = async (id) => {
+        const targetId = id || currentDraftId;
+        if (!targetId) {
+          showToast("请先选择草稿");
+          return;
+        }
+        draftPublishButton?.classList.add("loading");
+        try {
+          const response = await fetch(`/api/drafts/${targetId}/publish`, {
+            method: "POST",
+          });
+          if (!response.ok) {
+            throw new Error("publish failed");
+          }
+          const data = await response.json();
+          setEditorDraft(data.draft);
+          showToast("已推送到微信草稿箱");
+          await loadDrafts();
+        } catch {
+          showToast("草稿发布失败");
+        } finally {
+          draftPublishButton?.classList.remove("loading");
+        }
+      };
+
+      const deleteDraft = async () => {
+        if (!currentDraftId) {
+          showToast("请先选择草稿");
+          return;
+        }
+        draftDeleteButton?.classList.add("loading");
+        try {
+          const response = await fetch(`/api/drafts/${currentDraftId}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            throw new Error("delete failed");
+          }
+          setEditorDraft(null);
+          showToast("草稿已删除");
+          await loadDrafts();
+        } catch {
+          showToast("草稿删除失败");
+        } finally {
+          draftDeleteButton?.classList.remove("loading");
+        }
+      };
+
+      if (draftListEl) {
+        draftListEl.addEventListener("click", (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          const button = target.closest("button");
+          if (!button) return;
+          const action = button.dataset.action;
+          const id = button.dataset.id;
+          if (!action || !id) return;
+          if (action === "edit") {
+            loadDraftDetail(id);
+            return;
+          }
+          if (action === "publish") {
+            publishDraft(id);
+            return;
+          }
+          if (action === "delete") {
+            currentDraftId = id;
+            deleteDraft();
+          }
+        });
+      }
+
+      draftSaveButton?.addEventListener("click", saveDraft);
+      draftPublishButton?.addEventListener("click", () => publishDraft());
+      draftDeleteButton?.addEventListener("click", deleteDraft);
+      draftCloseButton?.addEventListener("click", () => {
+        draftModal?.classList.remove("show");
+      });
+      draftModal?.addEventListener("click", (event) => {
+        if (event.target === draftModal) {
+          draftModal.classList.remove("show");
+        }
+      });
+      loadDrafts();
+
+      const applyStored = (key, fallback) => {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      };
+      const sourceSelect = document.getElementById("publish-source");
+      const maxInput = document.getElementById("publish-max");
+      const forceInput = document.getElementById("publish-force");
+      if (sourceSelect) {
+        sourceSelect.value = applyStored("tp.publish.source", "all");
+        sourceSelect.addEventListener("change", () => {
+          window.localStorage.setItem("tp.publish.source", sourceSelect.value);
+        });
+      }
+      if (maxInput) {
+        maxInput.value = applyStored("tp.publish.max", "");
+        maxInput.addEventListener("input", () => {
+          window.localStorage.setItem("tp.publish.max", maxInput.value);
+        });
+      }
+      if (forceInput) {
+        forceInput.checked = applyStored("tp.publish.force", "true") === "true";
+        forceInput.addEventListener("change", () => {
+          window.localStorage.setItem("tp.publish.force", forceInput.checked ? "true" : "false");
+        });
+      }
+    </script>
+  </body>
+</html>

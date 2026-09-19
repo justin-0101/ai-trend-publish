@@ -1,0 +1,121 @@
+<!-- 主容器 -->
+<div style="
+    margin: 0 12px;
+    padding: 16px 0;
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    line-height: 1.6;
+    color: #333333;
+    background: #ffffff;
+  ">
+  <!-- 目录部分 -->
+  <div style="
+      margin: 20px 8px 32px;
+      padding: 24px;
+      background: #fafafa;
+      border-radius: 12px;
+    ">
+    <div style="
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e8e8e8;
+          color: #262626;
+          font-size: 18px;
+          font-weight: bold;
+        ">
+      文章导览
+    </div>
+
+    <% for(var i=0; i<articles.length; i++) { var article=articles[i]; %>
+      <div style="
+              margin: 16px 0;
+              padding: 16px 20px;
+              background: #ffffff;
+              border-radius: 8px;
+              border: 1px solid #f0f0f0;
+            ">
+        <div style="
+                  color: #8c8c8c;
+                  font-size: 13px;
+                  margin-bottom: 8px;
+                ">
+          <%= (i + 1).toString().padStart(2, '0' ) %> / <%= articles.length.toString().padStart(2, '0' ) %>
+        </div>
+        <div style="
+                  color: #262626;
+                  font-size: 16px;
+                  font-weight: 500;
+                  line-height: 1.4;
+                ">
+          <%= article.title %>
+        </div>
+      </div>
+      <% } %>
+  </div>
+
+  <!-- 文章内容部分 -->
+  <% for(var j=0; j<articles.length; j++) { var article=articles[j]; %>
+    <div style="margin: 40px 8px;">
+      <!-- 文章头部 -->
+      <div style="margin-bottom: 32px;">
+        <!-- 编号 -->
+        <div style="
+                  margin-bottom: 16px;
+                  color: #8c8c8c;
+                  font-size: 14px;
+                ">
+          <%= (j + 1).toString().padStart(2, '0' ) %> / <%= articles.length.toString().padStart(2, '0' ) %>
+        </div>
+
+        <!-- 标题 -->
+        <div style="
+                  font-size: 24px;
+                  font-weight: bold;
+                  color: #262626;
+                  margin-bottom: 12px;
+                  line-height: 1.4;
+                ">
+          <%= article.title %>
+        </div>
+
+        <!-- 发布日期 -->
+        <div style="
+                  color: #8c8c8c;
+                  font-size: 14px;
+                  padding-bottom: 16px;
+                  border-bottom: 1px solid #f0f0f0;
+                ">
+          <%= article.publishDate %>
+        </div>
+      </div>
+
+      <!-- 文章内容 -->
+      <div style="
+              padding: 0 12px;
+            ">
+        <% var content=article.content || "" ; var paragraphs=content.split("<next_paragraph />");
+        for(var i=0; i<paragraphs.length; i++) { var para=paragraphs[i].trim(); if(para.length> 0) {
+          %>
+          <p style="
+                      margin: 0 0 20px;
+                      color: #595959;
+                      font-size: 16px;
+                      line-height: 1.8;
+                      text-align: justify;
+                    "><%- para %></p>
+          <% }} %>
+      </div>
+    </div>
+
+    <!-- 文章分隔 -->
+    <% if (j < articles.length - 1) { %>
+      <div style="
+              margin: 48px auto;
+              text-align: center;
+              color: #bfbfbf;
+              font-size: 13px;
+            ">
+        * * *
+      </div>
+      <% } %>
+        <% } %>
+</div>

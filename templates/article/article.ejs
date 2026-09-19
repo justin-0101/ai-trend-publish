@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>文章模板</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <% articles.forEach(function(article) { %>
+    <article>
+      <h1><%= article.title %></h1>
+      <div class="content">
+        <%- article.content %>
+      </div>
+    </article>
+  <% }); %>
+</body>
+</html>

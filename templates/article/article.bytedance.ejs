@@ -1,0 +1,36 @@
+<!-- Xiaohu 风格：字节蓝（bytedance） -->
+<div style="margin:0 auto;max-width:680px;padding:16px;background:#ffffff;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.8;color:#4e5969;">
+  <div style="margin:0 0 24px;padding:14px 24px;border-top:3px solid #1677ff;border-bottom:1px solid rgba(5,212,205,0.5);border-radius:4px;text-align:center;line-height:1.3;">
+    <div style="font-size:24px;font-weight:700;color:#1d2129;letter-spacing:0.08em;"><%= brand || 'AI 周报' %></div>
+    <div style="margin-top:8px;color:#86909c;font-size:13px;letter-spacing:0.08em;">TECH · INSIGHT · UPDATE</div>
+  </div>
+
+  <div style="margin:0 0 32px;padding:14px 16px;background:#f7f8fa;border-radius:8px;">
+    <div style="margin:0 0 12px;color:#1677ff;font-size:17px;font-weight:700;letter-spacing:0.08em;">本期内容</div>
+    <% for (var i = 0; i < articles.length; i++) { var tocArticle = articles[i]; %>
+      <div style="margin:8px 0;padding:9px 12px;background:#ffffff;border-left:3px solid #1677ff;border-radius:6px;color:#1d2129;font-size:14px;">
+        <span style="display:inline-block;margin-right:8px;color:#1677ff;font-weight:700;"><%= (i + 1).toString().padStart(2, '0') %></span><%= tocArticle.title %>
+      </div>
+    <% } %>
+  </div>
+
+  <% for (var j = 0; j < articles.length; j++) { var article = articles[j]; %>
+    <div style="margin:0 0 38px;">
+      <div style="margin:0 0 18px;padding:12px 18px;background:#f7f8fa;border-radius:8px;">
+        <div style="margin:0 0 8px;color:#1677ff;font-size:13px;font-weight:700;letter-spacing:0.1em;">NO.<%= (j + 1).toString().padStart(2, '0') %></div>
+        <div style="font-size:22px;font-weight:700;color:#1d2129;line-height:1.4;letter-spacing:0.04em;"><%= article.title %></div>
+        <div style="margin-top:8px;color:#86909c;font-size:13px;"><%= article.publishDate || '' %></div>
+      </div>
+      <div style="padding:0 10px;color:#4e5969;font-size:16px;text-align:justify;">
+        <% var content = article.content || ''; var paragraphs = content.split('<next_paragraph />'); for (var k = 0; k < paragraphs.length; k++) { var para = paragraphs[k].trim(); if (para.length > 0) { %>
+          <div style="margin:0 0 16px;line-height:1.8;"><%- para %></div>
+        <% } } %>
+      </div>
+      <% if (j < articles.length - 1) { %>
+        <div style="margin:26px auto 0;width:120px;height:2px;background:linear-gradient(to right,#1677ff,#05d4cd);border-radius:2px;"></div>
+      <% } %>
+    </div>
+  <% } %>
+
+  <div style="margin:8px 0 0;padding:12px;color:#86909c;font-size:12px;text-align:center;letter-spacing:0.08em;">KEEP EXPLORING</div>
+</div>

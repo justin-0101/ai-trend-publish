@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendPublish 选择模板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
+    <style>
+      :root {
+        --bg: #0f1115;
+        --bg-deep: #0a0c10;
+        --panel: #1a1f27;
+        --paper: #f5f0e8;
+        --paper-2: #e9e0d3;
+        --text: #e8e6e2;
+        --muted: #9aa3af;
+        --accent: #f6c859;
+        --accent-2: #6ee7b7;
+        --danger: #f472b6;
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
+          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          linear-gradient(180deg, var(--bg), var(--bg-deep));
+        min-height: 100vh;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        background: rgba(10, 12, 16, 0.9);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .brand {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #f6c859, #d29a26);
+        display: grid;
+        place-items: center;
+        color: #1a1200;
+        font-weight: 700;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: transparent;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+        text-decoration: none;
+      }
+
+      .nav-item.active {
+        background: rgba(246, 200, 89, 0.12);
+        border-color: rgba(246, 200, 89, 0.35);
+        color: #ffe7b0;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-badge {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .sidebar-card {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar-card h4 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #fbd88a;
+        font-weight: 600;
+      }
+
+      .sidebar-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .main {
+        padding: 26px 32px 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 24px;
+      }
+
+      .search {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 16px;
+        color: var(--muted);
+        max-width: 420px;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .run-btn {
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #f6c859, #ffda7b);
+        color: #2d1a00;
+        font-weight: 600;
+        border: none;
+        box-shadow: 0 12px 24px rgba(246, 200, 89, 0.35);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .run-btn:active {
+        transform: translateY(1px);
+        box-shadow: 0 8px 18px rgba(246, 200, 89, 0.28);
+      }
+
+      .run-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .config-panel {
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .config-title {
+        font-size: 13px;
+        color: #fbd88a;
+        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .toggle input {
+        accent-color: #f6c859;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .panel-title h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .gallery {
+        grid-column: span 12;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .gallery-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+
+      .gallery-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      }
+
+      .gallery-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(246, 200, 89, 0.5);
+      }
+
+      .gallery-card.active {
+        border-color: rgba(246, 200, 89, 0.8);
+        background: rgba(246, 200, 89, 0.12);
+      }
+
+      .gallery-card h4 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .gallery-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .preview {
+        grid-column: span 12;
+        background: linear-gradient(145deg, rgba(245, 240, 232, 0.95), rgba(233, 224, 211, 0.9));
+        color: #3a2d1f;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .preview h3 {
+        color: #3a2d1f;
+      }
+
+      .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 12px;
+      }
+
+      .preview-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .preview-card h4 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .preview-meta {
+        font-size: 12px;
+        color: #5a4b3a;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(90, 75, 58, 0.2);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .preview-body {
+        background: #faf7f2;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+      }
+
+      .preview-frame {
+        width: 100%;
+        height: 300px;
+        border: none;
+        display: block;
+        background: #ffffff;
+      }
+
+      .editor {
+        display: grid;
+        gap: 10px;
+      }
+
+      .editor textarea {
+        width: 100%;
+        min-height: 150px;
+        resize: vertical;
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(0, 0, 0, 0.14);
+        background: rgba(255, 255, 255, 0.88);
+        color: #3a2d1f;
+        font-size: 12px;
+        line-height: 1.55;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+      }
+
+      @media (max-width: 980px) {
+        .preview-frame {
+          height: 260px;
+        }
+      }
+
+      .preview-placeholder {
+        margin: 0;
+        font-size: 12px;
+        color: #5a4b3a;
+        padding: 16px;
+      }
+
+      .actions {
+        grid-column: span 12;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .action-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        text-align: left;
+      }
+
+      .action-card:hover {
+        border-color: rgba(110, 231, 183, 0.6);
+        background: rgba(110, 231, 183, 0.08);
+        transform: translateY(-1px);
+      }
+
+      .toast {
+        position: fixed;
+        right: 26px;
+        bottom: 26px;
+        background: rgba(26, 31, 39, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+        font-size: 12px;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .view.hidden {
+        display: none;
+      }
+
+      .library-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+
+      .library-card {
+        padding: 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: grid;
+        gap: 8px;
+      }
+
+      .library-card h4 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .library-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .library-tag {
+        font-size: 12px;
+        color: var(--muted);
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .library-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .library-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .library-card {
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      }
+
+      .library-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(246, 200, 89, 0.5);
+      }
+
+      .library-card.active {
+        border-color: rgba(246, 200, 89, 0.8);
+        background: rgba(246, 200, 89, 0.12);
+      }
+
+      .ghost-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .ghost-btn:active {
+        transform: translateY(1px);
+      }
+
+      .library-editor {
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .library-editor.hidden {
+        display: none;
+      }
+
+      .library-editor textarea {
+        width: 100%;
+        min-height: 220px;
+        resize: vertical;
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.55;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+      }
+
+      .ghost-btn[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .preview-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+        background: rgba(8, 11, 15, 0.72);
+        backdrop-filter: blur(4px);
+      }
+
+      .preview-modal.hidden {
+        display: none;
+      }
+
+      .preview-dialog {
+        display: flex;
+        flex-direction: column;
+        width: min(980px, 100%);
+        height: min(88vh, 900px);
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(26, 31, 39, 0.98);
+        box-shadow: var(--shadow);
+      }
+
+      .preview-dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .preview-dialog-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .preview-dialog-title h3 {
+        margin: 0;
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .preview-dialog-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .preview-dialog-body {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        background: #ffffff;
+      }
+
+      .preview-dialog-body .preview-frame {
+        width: 100%;
+        height: 100%;
+      }
+
+      .preview-dialog-body .preview-frame.hidden {
+        display: none;
+      }
+
+      .preview-dialog-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #6b5b4a;
+        background: #faf7f2;
+      }
+
+      .preview-dialog-empty.hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-badge">TP</div>
+          TrendPublish
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" id="nav-templates-preview" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
+          <a class="nav-item" id="nav-templates-library" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+        </nav>
+        <div class="sidebar-card">
+          <h4>模板库</h4>
+          <p>当前共有 8 套模板可选，含自定义与示例模板</p>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="view" id="view-preview">
+          <div class="topbar">
+            <div class="search">搜索模板或内容</div>
+            <div class="top-actions">
+              <div class="pill" id="preview-selected-pill">当前：Modern</div>
+              <button class="run-btn" id="run-preview" type="button">生成预览</button>
+            </div>
+          </div>
+          <div class="config-panel">
+            <div class="config-title">预览参数</div>
+            <div class="config-grid">
+              <label class="field">
+                预览条数
+                <input id="preview-max" type="number" min="1" max="30" placeholder="默认 10">
+              </label>
+              <label class="toggle">
+                <input id="preview-publish" type="checkbox">
+                同步发布
+              </label>
+            </div>
+          </div>
+          <section class="grid">
+            <div class="panel gallery">
+              <div class="panel-title">
+                <h3>模板画廊</h3>
+                <span class="pill">推荐</span>
+              </div>
+              <div class="gallery-list" id="template-gallery"></div>
+            </div>
+            <div class="panel actions">
+              <button class="action-card" id="export-html" type="button">导出 HTML · 同步至 output 目录</button>
+              <button class="action-card" id="copy-layout" type="button">复制排版 · 一键复制到剪贴板</button>
+              <button class="action-card" id="save-default" type="button">保存默认模板 · 绑定工作流输出</button>
+            </div>
+            <div class="panel preview">
+              <div class="panel-title">
+                <h3>内容预览</h3>
+                <span class="pill" id="preview-meta">modern</span>
+              </div>
+              <div class="preview-body">
+                <iframe class="preview-frame" id="preview-frame" title="模板预览"></iframe>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="view hidden" id="view-library">
+          <div class="topbar">
+            <div class="search">搜索模板或工作流</div>
+            <div class="top-actions">
+              <div class="pill" id="library-count-pill">模板 8</div>
+              <button class="ghost-btn" id="library-add" type="button">新增模板</button>
+            </div>
+          </div>
+          <section class="grid">
+            <div class="panel gallery">
+              <div class="panel-title">
+                <h3>模板库</h3>
+                <span class="pill">全量</span>
+              </div>
+              <div class="library-grid" id="library-grid"></div>
+              <div class="library-editor hidden" id="library-editor">
+                <div class="config-grid">
+                  <label class="field">
+                    模板名称
+                    <input id="library-edit-name" type="text" placeholder="请输入模板名称">
+                  </label>
+                </div>
+                <label class="field">
+                  模板内容
+                  <textarea id="library-edit-html" placeholder="请输入模板 HTML"></textarea>
+                </label>
+                <div class="top-actions" style="justify-content:flex-end;">
+                  <button class="ghost-btn" id="library-delete" type="button">删除模板</button>
+                  <button class="ghost-btn" id="library-preview" type="button">模板预览</button>
+                  <button class="run-btn" id="library-save" type="button">保存修改</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <div class="preview-modal hidden" id="library-preview-modal">
+      <div class="preview-dialog">
+        <div class="preview-dialog-head">
+          <div class="preview-dialog-title">
+            <h3 id="library-preview-title">模板预览</h3>
+            <span class="pill" id="library-preview-meta">—</span>
+          </div>
+          <div class="preview-dialog-actions">
+            <button class="ghost-btn" id="library-preview-refresh" type="button">刷新预览</button>
+            <button class="ghost-btn" id="library-preview-close" type="button">关闭</button>
+          </div>
+        </div>
+        <div class="preview-dialog-body">
+          <iframe class="preview-frame" id="library-preview-frame" title="模板预览"></iframe>
+          <div class="preview-dialog-empty hidden" id="library-preview-empty">暂无预览内容</div>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+      const toast = document.getElementById("toast");
+
+      const showToast = (message) => {
+        if (!toast) {
+          return;
+        }
+        toast.textContent = message;
+        toast.classList.add("show");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1800);
+      };
+
+      const applyStored = (key, fallback) => {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      };
+      const storeValue = (key, value) => {
+        window.localStorage.setItem(key, value);
+      };
+      const STORAGE_USER_TEMPLATES = "tp.library.userTemplates";
+      const STORAGE_PREVIEW_SELECTED = "tp.preview.selectedTemplateId";
+      const STORAGE_LIBRARY_SELECTED = "tp.library.selectedTemplateId";
+
+      const maxInput = document.getElementById("preview-max");
+      const publishInput = document.getElementById("preview-publish");
+      if (maxInput) {
+        maxInput.value = applyStored("tp.preview.max", "");
+        maxInput.addEventListener("input", () => {
+          storeValue("tp.preview.max", maxInput.value);
+        });
+      }
+      if (publishInput) {
+        publishInput.checked = applyStored("tp.preview.publish", "false") === "true";
+        publishInput.addEventListener("change", () => {
+          storeValue("tp.preview.publish", publishInput.checked ? "true" : "false");
+        });
+      }
+
+      const builtInArticleTemplates = [
+        { id: "builtin:article:modern", name: "Modern", templateType: "modern", description: "强调摘要与卡片式亮点" },
+        { id: "builtin:article:tech", name: "Tech", templateType: "tech", description: "技术流排版，突出结构层级" },
+        { id: "builtin:article:mianpro", name: "Mianpro", templateType: "mianpro", description: "沉稳简洁，适合公众号长文" },
+        { id: "builtin:article:data-report", name: "数据简报", templateType: "data-report", description: "报告蓝与橙色重点，适合 AI 热点与数据内容" },
+        { id: "builtin:article:bytedance", name: "字节蓝", templateType: "bytedance", description: "蓝青渐变科技风，适合产品与行业动态" },
+        { id: "builtin:article:daimo", name: "大厂", templateType: "daimo", description: "暖白留白与衬线标题，适合 AI 深度文章" },
+      ];
+
+      const builtInLibraryTemplates = [
+        { id: "builtin:article:default", title: "文章 · Default", workflowType: "article", templateType: "default", tags: ["workflow: weixin-article", "template: default"], description: "基础排版，适合通用场景" },
+        { id: "builtin:article:modern", title: "文章 · Modern", workflowType: "article", templateType: "modern", tags: ["workflow: weixin-article", "template: modern"], description: "强调摘要与卡片式亮点" },
+        { id: "builtin:article:tech", title: "文章 · Tech", workflowType: "article", templateType: "tech", tags: ["workflow: weixin-article", "template: tech"], description: "技术流排版，突出结构层级" },
+        { id: "builtin:article:mianpro", title: "文章 · Mianpro", workflowType: "article", templateType: "mianpro", tags: ["workflow: weixin-article", "template: mianpro"], description: "沉稳简洁，适合公众号长文" },
+        { id: "builtin:article:data-report", title: "文章 · 数据简报", workflowType: "article", templateType: "data-report", tags: ["workflow: weixin-article", "template: data-report"], description: "报告蓝与橙色重点，适合 AI 热点与数据内容" },
+        { id: "builtin:article:bytedance", title: "文章 · 字节蓝", workflowType: "article", templateType: "bytedance", tags: ["workflow: weixin-article", "template: bytedance"], description: "蓝青渐变科技风，适合产品与行业动态" },
+        { id: "builtin:article:daimo", title: "文章 · 大厂", workflowType: "article", templateType: "daimo", tags: ["workflow: weixin-article", "template: daimo"], description: "暖白留白与衬线标题，适合 AI 深度文章" },
+        { id: "builtin:hellogithub:default", title: "HelloGitHub · Default", workflowType: "hellogithub", templateType: "default", tags: ["workflow: weixin-hellogithub", "template: default"], description: "项目卡片式呈现，适合榜单输出" },
+        { id: "builtin:aibench:default", title: "AI Bench · Default", workflowType: "aibench", templateType: "default", tags: ["workflow: weixin-aibench", "template: default"], description: "榜单摘要呈现，适合性能排行输出" },
+        { id: "legacy:templates:article.ejs", title: "示例模板（未注册）", previewable: false, tags: ["file: templates/article.ejs", "status: legacy"], description: "项目内存在但未纳入渲染器模板列表" },
+      ];
+
+      const defaultUserTemplateHtml = () => applyStored(
+        "tp.template.custom.html",
+        "<div style='padding:16px;font-family:system-ui;font-size:14px;line-height:1.6;'>\n  <h2 style='margin:0 0 10px;'>自定义模板</h2>\n  <p style='margin:0 0 12px;color:#555;'>你可以在模板库中编辑并保存。</p>\n  <div style='padding:12px;border:1px dashed #ccc;border-radius:12px;'>粘贴任何公众号排版 HTML。</div>\n</div>",
+      );
+
+      const readUserTemplates = () => {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_USER_TEMPLATES);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      };
+
+      const writeUserTemplates = (items) => {
+        window.localStorage.setItem(STORAGE_USER_TEMPLATES, JSON.stringify(items));
+      };
+
+      const migrateLegacyCustomTemplate = () => {
+        const existing = readUserTemplates();
+        if (existing.length > 0) {
+          return;
+        }
+        const html = defaultUserTemplateHtml();
+        const id = crypto.randomUUID();
+        const now = Date.now();
+        writeUserTemplates([{ id, name: "自定义模板", html, createdAt: now, updatedAt: now }]);
+      };
+
+      migrateLegacyCustomTemplate();
+
+      const navPreview = document.getElementById("nav-templates-preview");
+      const navLibrary = document.getElementById("nav-templates-library");
+      const viewPreview = document.getElementById("view-preview");
+      const viewLibrary = document.getElementById("view-library");
+      const getViewFromHash = () => (window.location.hash === "#library" ? "library" : "preview");
+
+      const setView = (view) => {
+        if (viewPreview) {
+          viewPreview.classList.toggle("hidden", view !== "preview");
+        }
+        if (viewLibrary) {
+          viewLibrary.classList.toggle("hidden", view !== "library");
+        }
+        if (navPreview) {
+          navPreview.classList.toggle("active", view === "preview");
+        }
+        if (navLibrary) {
+          navLibrary.classList.toggle("active", view === "library");
+        }
+      };
+
+      const getCount = () => {
+        const value = maxInput && maxInput.value ? Number(maxInput.value) : NaN;
+        if (Number.isFinite(value) && value > 0) {
+          return Math.min(20, Math.max(1, Math.floor(value)));
+        }
+        return 6;
+      };
+
+      // 预览 HTML wrapper：HTML 片段（如新的 Xiaohu 风格模板只输出 <div>）
+      // 缺少 <head><meta charset><style>，在 iframe.srcdoc 里渲染时浏览器会用默认
+      // body 字体 + 默认 8px margin，导致样式与设计稿不一致。完整 HTML 文档
+      // （老模板自带 <!DOCTYPE html> + <style> 块）直接原样渲染。
+      const wrapPreviewHtml = (html) => {
+        if (typeof html !== "string" || html.length === 0) return html;
+        if (/<!DOCTYPE html/i.test(html) || /<html[\s>]/i.test(html)) return html;
+        return "<!DOCTYPE html><html><head>" +
+          "<meta charset=\"utf-8\">" +
+          "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">" +
+          "<style>" +
+          "html,body{margin:0;padding:0;background:#ffffff;" +
+          "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;" +
+          "color:#333;line-height:1.6;-webkit-font-smoothing:antialiased;}" +
+          "img{max-width:100%;height:auto;}" +
+          "</style>" +
+          "</head><body>" + html + "</body></html>";
+      };
+      const setFrameContent = (frame, html) => {
+        if (!frame) return;
+        const wrapped = wrapPreviewHtml(html) || "<div style='padding:16px;font-size:12px;color:#6b5b4a;'>暂无预览内容</div>";
+        frame.srcdoc = wrapped;
+      };
+
+      const fetchPreview = async (templateType, workflowType = "article") => {
+        const response = await fetch("/api/templates/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workflowType,
+            templateType,
+            count: getCount(),
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("preview failed");
+        }
+        const data = await response.json();
+        return data.html || "";
+      };
+
+      const downloadHtml = (fileName, html) => {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+
+      const copyToClipboard = async (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      };
+
+      const getPreviewTemplates = () => {
+        const user = readUserTemplates().map((t) => ({
+          id: `user:${t.id}`,
+          name: t.name,
+          kind: "user",
+          description: "自定义模板",
+          html: t.html,
+        }));
+        const builtin = builtInArticleTemplates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          kind: "builtin",
+          templateType: t.templateType,
+          description: t.description,
+        }));
+        return [...builtin, ...user];
+      };
+
+      const findPreviewTemplate = (templateId) => {
+        const list = getPreviewTemplates();
+        return list.find((t) => t.id === templateId) || null;
+      };
+
+      const getSelectedPreviewTemplateId = () => {
+        const selected = applyStored(STORAGE_PREVIEW_SELECTED, "");
+        const list = getPreviewTemplates();
+        const exists = selected && list.some((t) => t.id === selected);
+        return exists ? selected : (list[0] ? list[0].id : "");
+      };
+
+      const setSelectedPreviewTemplateId = (id) => {
+        storeValue(STORAGE_PREVIEW_SELECTED, id);
+      };
+
+      const renderPreviewGallery = () => {
+        const container = document.getElementById("template-gallery");
+        if (!container) return;
+        container.innerHTML = "";
+        const list = getPreviewTemplates();
+        const selected = getSelectedPreviewTemplateId();
+        list.forEach((t) => {
+          const card = document.createElement("div");
+          card.className = "gallery-card";
+          if (t.id === selected) {
+            card.classList.add("active");
+          }
+          card.dataset.templateId = t.id;
+          card.innerHTML = `<h4>${t.name}</h4><p>${t.description || ""}</p>`;
+          card.addEventListener("click", async () => {
+            const id = card.dataset.templateId;
+            if (!id || id === getSelectedPreviewTemplateId()) return;
+            setSelectedPreviewTemplateId(id);
+            renderPreviewGallery();
+            try {
+              await refreshPreview();
+              showToast(`已切换到 ${t.name} 模板`);
+            } catch {
+              showToast("预览渲染失败");
+            }
+          });
+          container.appendChild(card);
+        });
+      };
+
+      const refreshPreview = async () => {
+        const selectedId = getSelectedPreviewTemplateId();
+        const selected = findPreviewTemplate(selectedId);
+        const pill = document.getElementById("preview-selected-pill");
+        const meta = document.getElementById("preview-meta");
+        const frame = document.getElementById("preview-frame");
+        if (pill) {
+          pill.textContent = selected ? `当前：${selected.name}` : "当前：-";
+        }
+        if (!selected) {
+          if (meta) meta.textContent = "-";
+          setFrameContent(frame, "");
+          return;
+        }
+        if (selected.kind === "builtin") {
+          if (meta) meta.textContent = selected.templateType;
+          setFrameContent(frame, "<div style='padding:16px;font-size:12px;color:#6b5b4a;'>渲染中...</div>");
+          const html = await fetchPreview(selected.templateType);
+          setFrameContent(frame, html);
+          return;
+        }
+        if (meta) meta.textContent = "custom";
+        setFrameContent(frame, selected.html || "");
+      };
+
+      const exportButton = document.getElementById("export-html");
+      if (exportButton) {
+        exportButton.addEventListener("click", async () => {
+          exportButton.classList.add("loading");
+          try {
+            const selectedId = getSelectedPreviewTemplateId();
+            const selected = findPreviewTemplate(selectedId);
+            if (!selected) {
+              showToast("未选择模板");
+              return;
+            }
+            if (selected.kind === "user") {
+              downloadHtml(`${selected.name || "custom"}.html`, selected.html || "");
+              showToast("已导出自定义模板");
+              return;
+            }
+            const response = await fetch("/api/templates/export", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                workflowType: "article",
+                templateType: selected.templateType,
+                count: getCount(),
+              }),
+            });
+            if (!response.ok) {
+              throw new Error("export failed");
+            }
+            const data = await response.json();
+            showToast(`已导出 ${data.fileName || "HTML"}`);
+          } catch {
+            showToast("导出失败");
+          } finally {
+            exportButton.classList.remove("loading");
+          }
+        });
+      }
+
+      const copyButton = document.getElementById("copy-layout");
+      if (copyButton) {
+        copyButton.addEventListener("click", async () => {
+          copyButton.classList.add("loading");
+          try {
+            const selectedId = getSelectedPreviewTemplateId();
+            const selected = findPreviewTemplate(selectedId);
+            if (!selected) {
+              showToast("未选择模板");
+              return;
+            }
+            const html = selected.kind === "builtin"
+              ? await fetchPreview(selected.templateType)
+              : (selected.html || "");
+            await copyToClipboard(html);
+            showToast("排版已复制到剪贴板");
+          } catch {
+            showToast("复制失败");
+          } finally {
+            copyButton.classList.remove("loading");
+          }
+        });
+      }
+
+      const saveButton = document.getElementById("save-default");
+      if (saveButton) {
+        saveButton.addEventListener("click", async () => {
+          saveButton.classList.add("loading");
+          try {
+            const selectedId = getSelectedPreviewTemplateId();
+            const selected = findPreviewTemplate(selectedId);
+            if (!selected) {
+              showToast("未选择模板");
+              return;
+            }
+            if (selected.kind !== "builtin") {
+              showToast("自定义模板暂不支持保存为默认模板");
+              return;
+            }
+            const response = await fetch("/api/templates/default", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                templateType: selected.templateType,
+              }),
+            });
+            if (!response.ok) {
+              throw new Error("save failed");
+            }
+            showToast(`默认模板已保存为 ${selected.templateType}`);
+          } catch {
+            showToast("保存失败");
+          } finally {
+            saveButton.classList.remove("loading");
+          }
+        });
+      }
+
+      const runButton = document.getElementById("run-preview");
+      if (runButton) {
+        runButton.addEventListener("click", async () => {
+          runButton.classList.add("loading");
+          try {
+            await refreshPreview();
+            showToast("预览已更新");
+          } catch {
+            showToast("预览刷新失败");
+          } finally {
+            runButton.classList.remove("loading");
+          }
+        });
+      }
+
+      const getSelectedLibraryTemplateId = () => applyStored(STORAGE_LIBRARY_SELECTED, "");
+      const setSelectedLibraryTemplateId = (id) => storeValue(STORAGE_LIBRARY_SELECTED, id);
+
+      const libraryPreviewModal = document.getElementById("library-preview-modal");
+      let libraryPreviewRequest = null;
+      let libraryPreviewOpenedAt = 0;
+
+      const setLibraryPreviewFrame = (html) => {
+        const frame = document.getElementById("library-preview-frame");
+        const empty = document.getElementById("library-preview-empty");
+        const hasContent = typeof html === "string" && html.trim().length > 0;
+        if (empty) {
+          empty.classList.toggle("hidden", hasContent);
+        }
+        if (frame) {
+          frame.classList.toggle("hidden", !hasContent);
+          frame.srcdoc = hasContent ? wrapPreviewHtml(html) : "";
+        }
+      };
+
+      const loadLibraryPreview = async () => {
+        const request = libraryPreviewRequest;
+        if (!libraryPreviewModal || !request) return;
+        const source = typeof request.source === "function" ? request.source() : request.source;
+        if (typeof source === "string" && source.trim() && source !== "加载中...") {
+          setLibraryPreviewFrame(source);
+          return;
+        }
+        setLibraryPreviewFrame(
+          "<div style='padding:16px;font-size:12px;color:#6b5b4a;'>预览加载中…</div>",
+        );
+        try {
+          const html = await fetchPreview(request.templateType, request.workflowType);
+          if (libraryPreviewRequest !== request) return;
+          setLibraryPreviewFrame(html);
+        } catch (error) {
+          if (libraryPreviewRequest !== request) return;
+          setLibraryPreviewFrame("");
+          showToast("预览加载失败");
+        }
+      };
+
+      const closeLibraryPreview = () => {
+        if (!libraryPreviewModal) return;
+        libraryPreviewModal.classList.add("hidden");
+        libraryPreviewRequest = null;
+        setLibraryPreviewFrame("");
+        document.body.style.overflow = "";
+      };
+
+      const openLibraryPreview = async ({ title, source, workflowType, templateType } = {}) => {
+        if (!libraryPreviewModal) return;
+        const titleEl = document.getElementById("library-preview-title");
+        const metaEl = document.getElementById("library-preview-meta");
+        if (titleEl) {
+          titleEl.textContent = title || "模板预览";
+        }
+        if (metaEl) {
+          metaEl.textContent = templateType
+            ? `${workflowType || "article"} · ${templateType}`
+            : "自定义模板";
+        }
+        libraryPreviewModal.classList.remove("hidden");
+        libraryPreviewOpenedAt = Date.now();
+        document.body.style.overflow = "hidden";
+        libraryPreviewRequest = {
+          source,
+          workflowType: workflowType || "article",
+          templateType: templateType || "default",
+        };
+        await loadLibraryPreview();
+      };
+
+      const wireLibraryPreview = () => {
+        if (!libraryPreviewModal) return;
+        const closeBtn = document.getElementById("library-preview-close");
+        const refreshBtn = document.getElementById("library-preview-refresh");
+        if (closeBtn) {
+          closeBtn.addEventListener("click", closeLibraryPreview);
+        }
+        if (refreshBtn) {
+          refreshBtn.addEventListener("click", () => {
+            loadLibraryPreview().catch(() => {});
+          });
+        }
+        libraryPreviewModal.addEventListener("click", (event) => {
+          if (event.target !== libraryPreviewModal) return;
+          // 刚打开时的连带点击（如双击）会落在遮罩层上，忽略以兄误关。
+          if (Date.now() - libraryPreviewOpenedAt < 350) return;
+          closeLibraryPreview();
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !libraryPreviewModal.classList.contains("hidden")) {
+            closeLibraryPreview();
+          }
+        });
+      };
+
+      wireLibraryPreview();
+
+      const renderCounts = () => {
+        const user = readUserTemplates();
+        const total = builtInLibraryTemplates.length + user.length;
+        const libraryPill = document.getElementById("library-count-pill");
+        if (libraryPill) {
+          libraryPill.textContent = `模板 ${total}`;
+        }
+        const sidebarCard = document.querySelector(".sidebar-card p");
+        if (sidebarCard) {
+          sidebarCard.textContent = `当前共有 ${total} 套模板可选，含自定义与示例模板`;
+        }
+        const previewBadge = navPreview ? navPreview.querySelector(".nav-badge") : null;
+        const libraryBadge = navLibrary ? navLibrary.querySelector(".nav-badge") : null;
+        if (previewBadge) {
+          previewBadge.textContent = String(total);
+        }
+        if (libraryBadge) {
+          libraryBadge.textContent = String(total);
+        }
+      };
+
+      const renderLibrary = () => {
+        const grid = document.getElementById("library-grid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        const selected = getSelectedLibraryTemplateId();
+        const user = readUserTemplates();
+        const userItems = user.map((t) => ({
+          id: `user:${t.id}`,
+          title: t.name,
+          html: t.html,
+          tags: ["source: localStorage", "type: custom"],
+          description: "自定义模板（可编辑）",
+        }));
+        const all = [...builtInLibraryTemplates, ...userItems];
+        all.forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "library-card";
+          if (item.id === selected) {
+            card.classList.add("active");
+          }
+          card.dataset.templateId = item.id;
+          const tags = (item.tags || []).map((t) => `<span class="library-tag">${t}</span>`).join("");
+          const canDelete = item.id.startsWith("user:");
+          const canPreview = item.previewable !== false;
+          card.innerHTML = `
+            <h4>${item.title}</h4>
+            <div class="library-meta">${tags}</div>
+            <p>${item.description || ""}</p>
+            <div class="library-actions">
+              <button class="ghost-btn" data-action="preview" type="button"${canPreview ? "" : " disabled title=\"该模板未注册渲染器，暂不支持预览\""}>预览</button>
+              ${canDelete ? `<button class="ghost-btn" data-action="delete" type="button">删除</button>` : ""}
+            </div>
+          `;
+          card.addEventListener("click", () => {
+            const id = card.dataset.templateId;
+            if (!id) return;
+            setSelectedLibraryTemplateId(id);
+            renderLibrary();
+            renderLibraryEditor();
+          });
+          const previewBtn = card.querySelector("[data-action='preview']");
+          if (previewBtn) {
+            previewBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!canPreview) {
+                showToast("该模板未注册渲染器，暂不支持预览");
+                return;
+              }
+              openLibraryPreview({
+                title: item.title,
+                source: item.html,
+                workflowType: item.workflowType,
+                templateType: item.templateType,
+              }).catch(() => {});
+            });
+          }
+          const deleteBtn = card.querySelector("[data-action='delete']");
+          if (deleteBtn) {
+            deleteBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const id = card.dataset.templateId;
+              if (!id || !id.startsWith("user:")) return;
+              const userId = id.slice("user:".length);
+              const next = readUserTemplates().filter((t) => t.id !== userId);
+              writeUserTemplates(next);
+              if (getSelectedLibraryTemplateId() === id) {
+                setSelectedLibraryTemplateId("");
+              }
+              if (getSelectedPreviewTemplateId() === id) {
+                setSelectedPreviewTemplateId(getPreviewTemplates()[0]?.id || "");
+              }
+              renderCounts();
+              renderLibrary();
+              renderLibraryEditor();
+              renderPreviewGallery();
+              refreshPreview().catch(() => {});
+              showToast("模板已删除");
+            });
+          }
+          grid.appendChild(card);
+        });
+      };
+
+      let libraryEditorToken = 0;
+
+      const renderLibraryEditor = () => {
+        const editor = document.getElementById("library-editor");
+        const nameInput = document.getElementById("library-edit-name");
+        const htmlInput = document.getElementById("library-edit-html");
+        const save = document.getElementById("library-save");
+        const del = document.getElementById("library-delete");
+        const previewBtn = document.getElementById("library-preview");
+        const selectedId = getSelectedLibraryTemplateId();
+        if (!editor || !nameInput || !htmlInput || !save || !del || !previewBtn) return;
+        const openEditorPreview = (workflowType, templateType, fallbackTitle) => {
+          openLibraryPreview({
+            title: String(nameInput.value || "").trim() || fallbackTitle,
+            source: () => htmlInput.value,
+            workflowType,
+            templateType,
+          }).catch(() => {});
+        };
+        if (!selectedId) {
+          editor.classList.add("hidden");
+          previewBtn.onclick = null;
+          return;
+        }
+        const templates = readUserTemplates();
+        const token = ++libraryEditorToken;
+        if (selectedId.startsWith("user:")) {
+          const userId = selectedId.slice("user:".length);
+          const current = templates.find((t) => t.id === userId);
+          if (!current) {
+            editor.classList.add("hidden");
+            return;
+          }
+          editor.classList.remove("hidden");
+          del.style.display = "";
+          nameInput.value = current.name || "";
+          htmlInput.value = current.html || "";
+          previewBtn.onclick = () => openEditorPreview("article", undefined, "自定义模板预览");
+          save.onclick = () => {
+            const nextName = String(nameInput.value || "").trim();
+            const nextHtml = String(htmlInput.value || "");
+            if (!nextName || !nextHtml) {
+              showToast("模板名称或内容不能为空");
+              return;
+            }
+            const now = Date.now();
+            const next = templates.map((t) =>
+              t.id === userId ? { ...t, name: nextName, html: nextHtml, updatedAt: now } : t
+            );
+            writeUserTemplates(next);
+            renderCounts();
+            renderLibrary();
+            renderPreviewGallery();
+            if (getSelectedPreviewTemplateId() === selectedId) {
+              refreshPreview().catch(() => {});
+            }
+            showToast("模板已保存");
+          };
+          del.onclick = () => {
+            const next = templates.filter((t) => t.id !== userId);
+            writeUserTemplates(next);
+            setSelectedLibraryTemplateId("");
+            if (getSelectedPreviewTemplateId() === selectedId) {
+              setSelectedPreviewTemplateId(getPreviewTemplates()[0]?.id || "");
+            }
+            renderCounts();
+            renderLibrary();
+            renderLibraryEditor();
+            renderPreviewGallery();
+            refreshPreview().catch(() => {});
+            showToast("模板已删除");
+          };
+          return;
+        }
+
+        if (selectedId.startsWith("builtin:article:")) {
+          editor.classList.remove("hidden");
+          del.style.display = "none";
+          const templateType = selectedId.split(":").pop();
+          const builtin = builtInLibraryTemplates.find((t) => t.id === selectedId);
+          nameInput.value = builtin ? `${builtin.title} 自定义` : "自定义模板";
+          htmlInput.value = "加载中...";
+          previewBtn.onclick = () => openEditorPreview("article", templateType, "模板预览");
+          fetchPreview(templateType).then((html) => {
+            if (token !== libraryEditorToken) return;
+            htmlInput.value = html || "";
+          }).catch(() => {
+            if (token !== libraryEditorToken) return;
+            htmlInput.value = "";
+          });
+          save.onclick = () => {
+            const nextName = String(nameInput.value || "").trim();
+            const nextHtml = String(htmlInput.value || "");
+            if (!nextName || !nextHtml || nextHtml === "加载中...") {
+              showToast("模板名称或内容不能为空");
+              return;
+            }
+            const id = crypto.randomUUID();
+            const now = Date.now();
+            const next = [{ id, name: nextName, html: nextHtml, createdAt: now, updatedAt: now }, ...templates];
+            writeUserTemplates(next);
+            const nextId = `user:${id}`;
+            setSelectedLibraryTemplateId(nextId);
+            setSelectedPreviewTemplateId(nextId);
+            renderCounts();
+            renderLibrary();
+            renderLibraryEditor();
+            renderPreviewGallery();
+            refreshPreview().catch(() => {});
+            showToast("已保存为自定义模板");
+          };
+          del.onclick = null;
+          return;
+        }
+
+        editor.classList.add("hidden");
+        previewBtn.onclick = null;
+        return;
+      };
+
+      const addTemplateButton = document.getElementById("library-add");
+      if (addTemplateButton) {
+        addTemplateButton.addEventListener("click", () => {
+          const name = window.prompt("请输入模板名称", "新模板");
+          if (!name) return;
+          const trimmed = String(name).trim();
+          if (!trimmed) return;
+          const items = readUserTemplates();
+          const id = crypto.randomUUID();
+          const now = Date.now();
+          const html = `<div style="padding:16px;font-family:system-ui;font-size:14px;line-height:1.6;">\n  <h2 style="margin:0 0 10px;">${trimmed}</h2>\n  <p style="margin:0;color:#555;">这是一个自定义模板。</p>\n</div>`;
+          const next = [{ id, name: trimmed, html, createdAt: now, updatedAt: now }, ...items];
+          writeUserTemplates(next);
+          setSelectedLibraryTemplateId(`user:${id}`);
+          setSelectedPreviewTemplateId(`user:${id}`);
+          renderCounts();
+          renderLibrary();
+          renderLibraryEditor();
+          renderPreviewGallery();
+          refreshPreview().catch(() => {});
+          showToast("模板已新增");
+        });
+      }
+
+      const initialView = getViewFromHash();
+      setView(initialView);
+      renderCounts();
+      renderPreviewGallery();
+      refreshPreview().catch(() => {});
+      renderLibrary();
+      renderLibraryEditor();
+      window.addEventListener("hashchange", () => {
+        const view = getViewFromHash();
+        setView(view);
+        if (view === "preview") {
+          renderPreviewGallery();
+          refreshPreview().catch(() => {});
+        } else {
+          renderCounts();
+          renderLibrary();
+          renderLibraryEditor();
+        }
+      });
+    </script>
+  </body>
+</html>

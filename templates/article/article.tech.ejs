@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>技术文章模板</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Fira Code', 'Source Code Pro', monospace; background: #f8f9fa; }
+    article { max-width: 900px; margin: 2rem auto; padding: 2rem; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { font-size: 2.2rem; color: #2d3748; margin-bottom: 1.5rem; }
+    .content { line-height: 1.8; color: #4a5568; font-size: 1.1rem; }
+    img { max-width: 100%; height: auto; margin: 1.5rem 0; border-radius: 4px; }
+    code { background: #edf2f7; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
+    pre { background: #2d3748; color: #e2e8f0; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <% articles.forEach(function(article) { %>
+    <article>
+      <h1><%= article.title %></h1>
+      <div class="content">
+        <%- article.content %>
+      </div>
+    </article>
+  <% }); %>
+</body>
+</html>
