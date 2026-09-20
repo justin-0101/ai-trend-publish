@@ -57,3 +57,6 @@ Thumbs.db
 
 # Scratch test scripts
 .*.tmp.ts
+
+# Agent 运行态（goal 台账 / 会话快照 / 锁），每台机器不同，不进仓库
+.pi/
