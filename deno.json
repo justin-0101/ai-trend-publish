@@ -1,8 +1,8 @@
 {
   "tasks": {
-    "start": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
-    "web": "deno run --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
-    "web:dev": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --env src/index.ts --no-check",
+    "start": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --allow-run --env src/index.ts --no-check",
+    "web": "deno run --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --allow-run --env src/index.ts --no-check",
+    "web:dev": "deno run --watch --allow-env --allow-ffi --allow-read --allow-write --allow-sys --allow-net --allow-run --env src/index.ts --no-check",
     "prod": "deno task web",
     "production": "deno task web",
     "test": "deno run --allow-env --allow-ffi --allow-read --allow-sys --allow-net --allow-write --env src/test.ts",

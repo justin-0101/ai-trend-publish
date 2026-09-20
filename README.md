@@ -82,6 +82,7 @@ deno task build:all
 - 🤖 多源数据采集
 
   - Twitter/X 内容抓取
+  - X 关键词全网搜索（浏览器自动化，skill `x-search-collector`，不需 API key）
   - 网站内容抓取 (基于 FireCrawl)
   - 支持自定义数据源配置
 
@@ -141,7 +142,8 @@ TrendPublish 提供了多种精美的文章模板。查看
 - **运行环境**: Deno + TypeScript
 - **AI 服务**: DeepseekAI Together 千问 万象 讯飞
 - **数据源**:
-  - Twitter/X API
+  - Twitter/X API（twitterapi.io）
+  - X 关键词全网搜索（已登录 Chrome + huashu-chrome 扩展，见 `ENV_CONFIGURATION.md` 的 `X_SEARCH_*`）
   - FireCrawl
 - **模板引擎**: EJS
 - **开发工具**:
@@ -257,6 +259,13 @@ FIRE_CRAWL_API_KEY="your_api_key"
 
 # Twitter API配置 https://twitterapi.io/
 X_API_BEARER_TOKEN="your_api_key"
+
+# X 关键词全网搜索（skill: x-search-collector，走已登录 Chrome，不需 API key）
+# 前置：Chrome 已登录 X、huashu-chrome 扩展在线、本机代理在线
+X_SEARCH_PAGES=top,latest
+X_SEARCH_ROUNDS=6
+X_SEARCH_MAX_POSTS=30
+X_SEARCH_TIMEOUT_MS=600000
 
 # ===================================
 # 其他通用配置

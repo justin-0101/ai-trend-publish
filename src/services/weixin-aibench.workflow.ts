@@ -15,6 +15,11 @@ import {
   WorkflowStep,
 } from "@src/works/workflow.ts";
 import { WorkflowTerminateError } from "@src/works/workflow-error.ts";
+import {
+  archiveDraft,
+  markArchivedDraftPublished,
+  readPublishFailure,
+} from "./draft-archive.ts";
 import { Logger } from "../utils/logger/logger.ts";
 
 const logger = Logger.getInstance();
@@ -22,6 +27,10 @@ const logger = Logger.getInstance();
 interface WeixinAIBenchWorkflowEnv {
   name: string;
   draftWriter?: (draft: { title: string; html: string; workflowType: string }) => Promise<unknown>;
+  draftStatusWriter?: (
+    id: string,
+    status: "draft" | "published",
+  ) => Promise<unknown>;
 }
 
 interface WeixinAIBenchWorkflowParams {
@@ -158,16 +167,14 @@ export class WeixinAIBenchWorkflow extends WorkflowEntrypoint<
         : event.payload.forcePublish
         ? true
         : (event.payload.publish ?? true);
-      if (publishMode === "draft") {
-        const draftWriter = this.env.env.draftWriter;
-        if (draftWriter) {
-          await draftWriter({
-            title,
-            html: htmlContent,
-            workflowType: "weixin-aibench",
-          });
-        }
-      }
+
+      // 先归档再发布：发布失败时内容不至于一起丢（详见 services/draft-archive.ts）
+      const archivedDraftId = await archiveDraft(
+        this.env.env,
+        { title, html: htmlContent, workflowType: "weixin-aibench" },
+        logger,
+      );
+
       const publishResult = shouldPublish
         ? await step.do("publish-article", {
           retries: { limit: 3, delay: "10 second", backoff: "exponential" },
@@ -181,6 +188,17 @@ export class WeixinAIBenchWorkflow extends WorkflowEntrypoint<
           });
         })
         : { status: "skipped" };
+
+      // publish() 失败时是返回 success:false，不抛异常，必须主动检查
+      const failure = readPublishFailure(publishResult);
+      if (failure) {
+        throw new WorkflowTerminateError(
+          `发布失败（内容已归档到本地草稿箱）：${failure}`,
+        );
+      }
+      if (shouldPublish) {
+        await markArchivedDraftPublished(this.env.env, archivedDraftId, logger);
+      }
 
       // 7. 完成报告
       logger.info(`[工作流] 工作流执行完成`);

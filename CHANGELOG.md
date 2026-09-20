@@ -2,6 +2,245 @@
 
 ## [未发布] - 2026-09-20
 
+### 发布方式口径统一：立即发布真发，任何模式都同步存一份本地草稿
+
+**决策（本人）**：「真发，不用发送到草稿箱」+「同时也可以保存到草稿箱」。
+即：**一键 = 真发 + 同时归档一份本地草稿**。
+
+#### 先摆一个必须知道的事实
+
+本项目的「发布」= **创建公众号草稿**，不是群发。
+`WeixinPublisher.publish()` 只调 `POST /cgi-bin/draft/add`（`weixin.publisher.ts:376`），
+全项目搜不到 `freepublish` / `mass` 调用 —— 也就是说**这个代码库从来没有把文章推送给粉丝的能力**。
+所以「真发」在现有能力内只能落成「真的调微信接口、真的进公众号后台草稿箱」；
+要不要真群发是另一个决定（涉及群发配额与不可撤销），未做。
+UI 文案已按这个事实写，不再让人误以为点下去粉丝就收到了。
+
+#### 修的三个真问题
+
+**1. 「立即发布」会静默地什么都不做**
+
+`workflows.html` 的 `publish` 推导是
+`publishMode === "draft" ? false : (settings.run.publish ?? core.article.publish)`，
+而两个 fallback 都是 `false`。所以选「立即发布」发出的是：
+
+```
+{"publishMode":"immediate","publish":false}   ← 实测请求体
+```
+
+工作流侧：`publishMode !== 'draft'` → 看 `publish` = false → 不发布；
+而 `publishMode === 'draft'` 才写草稿 —— 于是 immediate 模式**既不真发、也不存档，文章渲染完直接丢弃**。
+
+现在 `publish` 一律由 `publishMode` 推导（`publish: publishMode === 'immediate'`），三个工作流都一样。
+
+**2. 发布失败被当成成功**
+
+`publish()` 失败时是**返回** `{success:false, error}`，**不抛异常**（`weixin.publisher.ts:353`）。
+而三个工作流都只 `await step.do("publish-article", …)`、不查返回值 →
+`publish-article` 永远绿、工作流永远 success，哪怕微信一个字节都没收到。
+
+现在新增 `readPublishFailure()` 收口：`success !== true` 就抛 `WorkflowTerminateError`，
+工作流如实变 `error`，消息里带微信给的原因。
+
+**3. 发布失败 = 内容全丢**
+
+旧逻辑下发布失败时文章没有任何副本（草稿只在 draft 模式写）。
+现在**先归档、再发布**：顺序不能反 —— 反过来时发布一失败，文章在本地也不剩。
+因此任何模式都会留一份本地草稿，发布失败的消息里也写明「内容已归档到本地草稿箱」。
+
+#### 新增：`src/services/draft-archive.ts`
+
+三个工作流共用一份实现（不再各自抄一遍）：
+
+| 导出 | 作用 |
+|---|---|
+| `archiveDraft()` | 出稿后落本地草稿；拿不到 id / 写失败只 warn，**不打断发布** |
+| `markArchivedDraftPublished()` | 发布成功后把归档草稿标为 `published` |
+| `readPublishFailure()` | 把 `{success:false}` 收口成一句失败原因 |
+
+配套：`src/index.ts` 新增 `updateDraftStatusById()`，并作为 `draftStatusWriter` 接进三个工作流的 env。
+
+**为何必须标 `published`**：不标的话，草稿箱里会留一条显示「草稿」、下面还挂着「发布」按钮的记录，
+用户点一下就是**重复提交到公众号**。
+
+#### UI（`docs/workflows.html`）
+
+- 选项重排：「只存本地草稿」在前、为默认；`publishMode` 的所有 fallback 从 `"immediate"` 改为 `"draft"`
+- 「立即发布」增加确认框，写明会真实提交、不可撤销、且会先存本地草稿
+- 新增随模式联动的诚实提示：
+  `立即发布到公众号` → 「会真实调微信接口，提交后进公众号后台的草稿箱（本项不代为群发）；失败时本地草稿仍在。」
+
+#### 验证（端到端，用不调 LLM 的 hellogithub 工作流）
+
+```
+A) publishMode=draft      → status=success，新建本地草稿 status=draft，无微信调用
+B) publishMode=immediate  → status=success，publish-article 步骤执行，
+                            归档草稿 status=published
+                           日志：[归档] 本地草稿已保存 id=5e7e80d3…
+                                [发布] 发布到微信公众号
+```
+
+**意外收获：微信 IP 白名单已经通了。** `GET /api/weixin/ip-check?force=1` → `{"ok":true,"reason":"ok"}`。
+（今天早上 09:0x 那次跑还是 40164，中间被修好了。）所以 B 那次是**真的建了一条公众号草稿**。
+测试草稿已在本地删除；微信后台那条需本人手动删（代码库无 `draft/delete`）：
+标题「本期精选 GitHub 热门 AI 开源项目…」、时间 2026-09-20 09:41。
+
+#### 未做
+
+- **真群发**（`freepublish/submit`）：需单独决定，有配额限制且不可撤销。
+- `docs/publish.html` 的选项文案仍是「立即发布到公众号」/「保存到草稿箱」，
+  未加 workflows.html 那句「不代为群发」的提示 —— 两页文案待下次对齐。
+
+---
+
+### 发布中心：默认只生成草稿，堵住「点一下就真发出去」的洞
+
+**问题（真实弧口）**：`docs/publish.html` 把 `publish: true` **写死在请求体里**，
+按钮还叫「立即发布」——点一下就是一次真实公众号推送，**没有任何中间态、没有确认、没有撤销**。
+旁边的「强制发布」复选框标题里看着像个安全开关，实际完全空转：
+工作流只读 `publish` / `publishMode`，而 `publish` 恒为 `true`，勾不勾都一样。
+**标签在lie，而且lie的方向是「看起来还有一道关」。**
+
+**改动**
+
+| 位置 | 之前 | 现在 |
+|---|---|---|
+| 发布参数面板 | 「强制发布」复选框（默认勾选、空转） | **发布方式下拉，默认「保存到草稿箱」** |
+| 顶部按钮文案 | 固定「立即发布」 | 随模式联动：「生成草稿」/「立即发布」 |
+| 请求体 | `publish: true` + `forcePublish` | `publishMode` + 由其推导的 `publish`（单一口径） |
+| 顶部按钮点击 | 直接发 | immediate 模式才先过 `window.confirm()`，取消则不发 |
+| 草稿行内「发布」 | 直接发 | 同样过 `window.confirm()` |
+| 草稿弹窗内「立即发布」 | 直接发 | 同样过 `window.confirm()` |
+
+**为什么 `publish` 必须由 `publishMode` 推导**：工作流里 `forcePublish` 的优先级高于 `publish`，
+两个字段各说各话时 `forcePublish:true` 会盖掉 `draft`，结果就是「明明选了草稿却发了出去」。
+本次修改后请求体只发 `publishMode` + 推导出来的 `publish`，不再传 `forcePublish`。
+
+**为什么用 `confirm()` 而不是 toast**：toast 不阻断、挡不住误点，而误点的代价是一条公开推文。
+确认框里把「会真实推送到公众号 / 微信侧不支持撤销 / 当前来源类型 / 当前入选数量」都写出来，
+让确认的是具体的事，不是一句「确定吗」。
+
+**验证**（浏览器实测，拦截 `fetch` 只采集请求体，不产生真实副作用）
+
+```
+首次访问     → 发布方式=draft，按钮=「生成草稿」，
+                无「强制发布」复选框
+draft 模式点按钮 → {"publishMode":"draft","publish":false}，不弹确认
+immediate 切后   → 按钮变「立即发布」
+取消确认     → confirm 文案正确，**零请求**（没发）
+确认后       → {"publishMode":"immediate","publish":true} → 发出 /api/workflows/run
+草稿行内发布   → confirm("确认把这篇草稿发布到微信公众号？…")；取消→零请求；确认→发 /api/drafts/<id>/publish
+草稿弹窗发布   → confirm 文案带标题；取消→零请求
+```
+
+**清理**：验证过程在测试浏览器里写入过 `tp.publish.mode=immediate`、
+以及拦截测试伪造的 jobId `capture-only`（污染了「最近任务」列表）。**已全部回滚**：
+删除 `tp.publish.mode`、删除 `activeJobId=capture-only`、`recentJobs` 从 10 条清回 8 条（只剔掉两条伪造记录）。
+
+**说明：`docs/publish.html` 不是唯一入口，`docs/workflows.html` 有一个反方向的同类问题（本次未改）**
+
+同一个 UI 里另一个「发布方式 → 立即发布」实测发出的请求体是：
+
+```
+{"sourceType":"twitter","publish":false,"publishMode":"immediate", …}
+```
+
+也就是 **选了「立即发布」实际不会发布**（工作流：`publishMode !== 'draft'` → 看 `forcePublish`（未传） → 看 `publish`（false）→ 不发）。
+两个页面的 `publish` 推导口径不一致（一个写死 true、一个跟 `core.article.publish` 走且默认 false），
+且 workflows.html 完全没有发布确认。
+
+**本次不动它**：把「立即发布」改成真发布 = 改变一个按钮的实际行为，
+而这个名字用户可能已经用过、并且习惯了它“不会真发”。这个决定留给本人做。
+
+---
+
+### X 关键词全网搜索：封装为 skill，并接入文章工作流自动调用
+
+**背景**：上一轮修好了「Twitter 源抓不到内容」，但恢复的是**固定账号时间线**。
+在 UI 里选 Twitter + 关键词 `GEO`，得到的仍然是 @OpenAIDevs 的最新 20 条（关键词只做正文过滤），
+拿不到「全网在聊 GEO 的推文」。要关键词全网搜索，只有 twitterapi.io 付费路线支持，而它当前欠费 402。
+
+**方案**：把采集方法本体封装成 skill，让**文章工作流在运行时自动调用它**。
+
+```
+E:\openclaw-skills\x-search-collector\
+  SKILL.md                        ← 方法论：为什么只能走浏览器、有哪些坑、验收标准
+  scripts\collect-x-search.mjs    ← 唯一一份可执行实现（Node，零依赖）
+```
+
+工作流侧只做「调用方」该做的事，**一行采集逻辑都不复制**（避免两份实现各自漂移）：
+
+| 文件 | 作用 |
+|---|---|
+| `src/modules/scrapers/x-search.scraper.ts` | 定位 skill → 传参 → 校验退出码 → 映射为 `ScrapedContent` |
+| `src/services/weixin-article.workflow.ts` | `scrape-contents` 步骤新增 `x-search` 分支 |
+| `docs/workflows.html` / `docs/publish.html` | 来源类型新增「X 关键词搜索」+ 关键词输入框 |
+| `deno.json` / `start-web.ps1` | 加 `--allow-run`（工作流要 spawn node 跑 skill） |
+| `scripts/verify-x-search.ts` | 不跑整个工作流、单独验证 skill 的 1 条命令 |
+
+#### 为什么是「工作流 spawn skill」，不是「让 agent 跑 skill」
+
+因为这是**流水线**，不是一次对话。工作流需要确定性的输入输出、退出码、超时和重试。
+所以 skill 以「可执行目录」形式落地：`SKILL.md` 给人/agent 读，`collect-x-search.mjs` 给流水线调。
+两边共用同一份方法，不存在「文档说的和代码做的不一样」。
+
+#### 三个必须理解的行为差异
+
+1. **关键词在 x-search 里是「搜什么」，不是「过滤什么」。**
+   之前 `includeKeywords` 是事后过滤器；x-search 的关键词是搜索请求本身。
+   X 的检索是宽匹配，拿同一个词再筛一遍正文会剔掉「搜到了但正文没字面命中」的内容，
+   最后报「过滤后无可用内容」——这正是「设了 GEO 却一条都没有」的假故障成因。
+   现在过滤步骤对 `platform === "x-search"` 的内容**跳过 includeKeywords，但保留 excludeKeywords**。
+
+2. **x-search 不进 `all`，也不做 fallback。**
+   它要开着 Chrome、靠本机代理、单次约 1~2 分钟；塞进 `all` 会让每次全量跑都变成一次浏览器自动化。
+   失败时也不回退到账号时间线：那会给出「与关键词无关的内容」却当成功，比直接失败更坏。
+   所以它**硬失败**，并把「代理没开 / 扩展离线 / 未登录 X」原样抛出。
+
+3. **原始 JSON 落盘且从不覆盖。**
+   `logs/x-search-<slug>-<本地时间戳>.json`。之前用「日期」命名，同一天重跑会把上一次的证据默默盖掉。
+   （本次开发中就真的盖掉了一份上一轮的 `logs/x-search-geo-2026-09-19.json`；
+   可读版 `output/x-search-geo-2026-09-19.md` 仍在，但原始 JSON 已不可复原。）
+
+#### 验证证据
+
+单 skill 直跑：
+
+```
+$ node scripts/verify-x-search.ts "GEO优化"   # 实际是 deno run scripts/verify-x-search.ts
+[X搜索] GEO优化 抓到 81 条，可用 30 条，用时 73.0s
+```
+
+工作流端到端（`POST /api/workflows/run`，`sourceType=x-search`，`includeKeywords=["GEO优化"]`，`publishMode=draft`）：
+
+```
+[数据源] 发现 1 个数据源
+[X搜索] 采集关键词: GEO优化（script=E:/openclaw-skills/x-search-collector/scripts/collect-x-search.mjs, pages=top,latest）
+[X搜索] GEO优化 抓到 72 条，可用 30 条，用时 76.9s，原始数据: logs/x-search-geo-20260920-075638.json
+[内容排序] 开始排序 30 条内容
+[发布] 已跳过发布
+→ status: success，5 个步骤全绿，产出草稿 16483e25（标题含「GEO」）
+```
+
+浏览器 UI 路径（拦截 `fetch` 只采集请求体，不产生真实副作用）：
+
+```
+workflows.html → {"sourceType":"x-search","includeKeywords":["GEO优化","\"AI coding agent\""],"publishMode":"draft"}
+publish.html   → {"sourceType":"x-search","includeKeywords":["GEO优化"],"publish":true}
+```
+
+关键词框只在选「X 关键词搜索」时出现（已实测三态切换：初始隐藏 → 选 x-search 显示 → 切回 Twitter 隐藏）。
+
+#### 已知遗留（本次未做）
+
+- **publish.html 的「立即发布」按钮发的是 `publish: true`**：本次**未在 UI 上点过它**，
+  只验证了它构造的请求体正确。该按钮在 2026-09-20 晚些时候的「发布方式口径统一」里已改成
+  由 `publishMode` 推导，详见上一条。
+- **草稿正文没有回链到原推文 URL**：模板没渲染 `url` 字段（数据里有），是上一轮就存在的老问题。
+- **媒体 URL 缺失**：DOM 路线只能判断「这条推有没有图」，拿不到图片地址，故 `media: []`。
+
+---
+
 ### 发布页新增 IP 白名单检测（根治“发布报错但界面说成功”）
 
 **背景（真实故障）**：排查时发现微信所有需要 `access_token` 的接口（含 `draft/add` 创建草稿）

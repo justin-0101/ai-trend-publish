@@ -5,6 +5,7 @@ import {
   ScraperOptions,
 } from "../interfaces/scraper.interface.ts";
 import { ConfigManager } from "../../utils/config/config-manager.ts";
+import { readOptionalConfig } from "../../utils/config/optional-config.ts";
 import { formatDate } from "../../utils/common.ts";
 
 const logger = {
@@ -22,9 +23,27 @@ export class TwitterScraper implements ContentScraper {
 
   async refresh(): Promise<void> {
     const startTime = Date.now();
-    this.xApiKey = await ConfigManager.getInstance().get(
-      "X_API_KEY",
-    );
+    // twitterapi.io 的密钥在本项目里有两个历史名字：代码读 X_API_KEY，
+    // 而 .env / .env.example 一直写的是 X_API_BEARER_TOKEN。只认一个名字就会出现
+    // “密钥明明配了却报 not found”的死局，所以这里按顺序回退，任何一个命中即可。
+    const candidates = ["X_API_KEY", "X_API_BEARER_TOKEN", "TWITTER_API_KEY"];
+    let key: string | null = null;
+    for (const name of candidates) {
+      const value = await readOptionalConfig(name);
+      if (typeof value === "string" && value.trim()) {
+        key = value.trim();
+        logger.debug(`TwitterScraper 使用配置键: ${name}`);
+        break;
+      }
+    }
+    if (!key) {
+      throw new Error(
+        `Twitter(API) 密钥未配置：请在 .env 配置 ${
+          candidates.join(" 或 ")
+        }（twitterapi.io 的 key）`,
+      );
+    }
+    this.xApiKey = key;
     logger.debug(
       `TwitterScraper 初始化完成, 耗时: ${Date.now() - startTime}ms`,
     );
@@ -399,7 +418,9 @@ export class TwitterFrontendScraper implements ContentScraper {
       const tweet = entry?.content?.tweet;
       if (!tweet) continue;
       const text = tweet.full_text || tweet.text || "";
-      const id = tweet.id || tweet.id_str;
+      // syndication 的 tweet.id 恒为 0，真实 id 在 id_str / permalink 里。
+      const id = tweet.id || tweet.id_str ||
+        String(tweet.permalink || tweet.url || "").match(/status\/(\d+)/)?.[1];
       if (!id || !text) continue;
       results.push({
         id: String(id),
@@ -421,10 +442,16 @@ export class TwitterFrontendScraper implements ContentScraper {
   }
 
   private extractMedia(tweet: any): Media[] {
+    // syndication.twitter.com 把媒体挂在 extended_entities/entities.media 下，
+    // GraphQL 接口才用 mediaDetails/media，两种都要认，否则封面图会丢。
     const mediaDetails = Array.isArray(tweet?.mediaDetails)
       ? tweet.mediaDetails
       : Array.isArray(tweet?.media)
       ? tweet.media
+      : Array.isArray(tweet?.extended_entities?.media)
+      ? tweet.extended_entities.media
+      : Array.isArray(tweet?.entities?.media)
+      ? tweet.entities.media
       : [];
     return mediaDetails.map((media: any) => ({
       url: media.media_url_https || media.media_url || media.url,

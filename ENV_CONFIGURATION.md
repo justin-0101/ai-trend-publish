@@ -132,6 +132,38 @@ FIRE_CRAWL_API_KEY=""  # FireCrawl API密钥
 X_API_BEARER_TOKEN=""  # Twitter API Bearer Token
 ```
 
+### X 关键词搜索采集配置（skill: x-search-collector）
+
+走「已登录 Chrome + huashu-chrome 扩展」的浏览器自动化路线，**不需要 X API key**。
+用来抓「关键词的全网搜索结果」——twitterapi.io 那条付费路线才能做的关键词搜索，
+免费通道（syndication）只有账号时间线，替代不了。
+
+```
+# skill 目录（默认自动探测 E:/openclaw-skills/x-search-collector）
+# X_SEARCH_SKILL_DIR=E:/openclaw-skills/x-search-collector
+
+# node 可执行文件（默认 node）
+# X_SEARCH_NODE=node
+
+# 抓哪几个榜单：top,latest / top / latest（latest 才是「最近在聊什么」）
+X_SEARCH_PAGES=top,latest
+
+# 每个榜单「滚一屏抓一屏」的轮数；越大条数越多、耗时越长
+X_SEARCH_ROUNDS=6
+
+# 单个关键词最多保留多少条
+X_SEARCH_MAX_POSTS=30
+
+# 单个关键词采集超时（毫秒）
+X_SEARCH_TIMEOUT_MS=600000
+```
+
+**前置条件（不满足会直接报错，不会静默出空稿）**：
+
+1. Chrome 里已登录 X，且 huashu-chrome 扩展显示「已连接」（跑 `huashu-chrome doctor` 可见）
+2. 本机代理在线（`HTTP_PROXY/HTTPS_PROXY = http://127.0.0.1:7897`）——x.com 直连不通
+3. 服务以 `--allow-run` 启动（`deno.json` 的 `start`/`web` 任务与 `start-web.ps1` 已包含）
+
 ### 通知服务配置
 
 ```

@@ -424,6 +424,31 @@ const getDraftById = async (id: string): Promise<DraftItem | null> => {
   return drafts.find((draft) => draft.id === id) ?? null;
 };
 
+/**
+ * 只改状态。给工作流用：真发成功后把归档草稿标成已发布，
+ * 否则草稿箱里会留一条显示「草稿」、还挂着「发布」按钮的记录，点一下就是重复提交。
+ */
+const updateDraftStatusById = async (
+  id: string,
+  status: DraftStatus,
+): Promise<boolean> => {
+  const drafts = await readDraftsFile();
+  const index = drafts.findIndex((draft) => draft.id === id);
+  if (index < 0) {
+    return false;
+  }
+  const now = Date.now();
+  const current = drafts[index];
+  drafts[index] = {
+    ...current,
+    status,
+    updatedAt: now,
+    publishedAt: status === "published" ? (current.publishedAt ?? now) : current.publishedAt,
+  };
+  await writeDraftsFile(drafts);
+  return true;
+};
+
 const updateDraftById = async (
   id: string,
   patch: { title?: string; html?: string },
@@ -1090,17 +1115,29 @@ const createWorkflow = (type: ApiWorkflowType) => {
     case "weixin-article":
       return new WeixinArticleWorkflow({
         id: "weixin-article-workflow",
-        env: { name: "weixin-article-workflow", draftWriter: addDraft },
+        env: {
+          name: "weixin-article-workflow",
+          draftWriter: addDraft,
+          draftStatusWriter: updateDraftStatusById,
+        },
       });
     case "weixin-aibench":
       return new WeixinAIBenchWorkflow({
         id: "weixin-aibench-workflow",
-        env: { name: "weixin-aibench-workflow", draftWriter: addDraft },
+        env: {
+          name: "weixin-aibench-workflow",
+          draftWriter: addDraft,
+          draftStatusWriter: updateDraftStatusById,
+        },
       });
     case "weixin-hellogithub":
       return new WeixinHelloGithubWorkflow({
         id: "weixin-hellogithub-workflow",
-        env: { name: "weixin-hellogithub-workflow", draftWriter: addDraft },
+        env: {
+          name: "weixin-hellogithub-workflow",
+          draftWriter: addDraft,
+          draftStatusWriter: updateDraftStatusById,
+        },
       });
   }
 };

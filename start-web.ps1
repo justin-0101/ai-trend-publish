@@ -246,7 +246,7 @@ $denoArgs = @("run")
 if ($Dev) { $denoArgs += "--watch" }
 $denoArgs += @(
   "--allow-env", "--allow-ffi", "--allow-read", "--allow-write",
-  "--allow-sys", "--allow-net", "--env", "src/index.ts", "--no-check"
+  "--allow-sys", "--allow-net", "--allow-run", "--env", "src/index.ts", "--no-check"
 )
 
 Write-Host ""

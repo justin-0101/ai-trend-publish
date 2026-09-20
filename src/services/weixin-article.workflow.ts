@@ -11,6 +11,7 @@ import { WeixinPublisher } from "../modules/publishers/weixin.publisher.ts";
 import { WeixinTemplate } from "../modules/render/interfaces/article.type.ts";
 import { FireCrawlScraper } from "../modules/scrapers/fireCrawl.scraper.ts";
 import { TwitterCookieScraper, TwitterFrontendScraper, TwitterScraper } from "../modules/scrapers/twitter.scraper.ts";
+import { XSearchScraper } from "../modules/scrapers/x-search.scraper.ts";
 import { AISummarizer } from "../modules/summarizer/ai.summarizer.ts";
 import { ImageGeneratorFactory } from "../providers/image-gen/image-generator-factory.ts";
 import { WeixinArticleTemplateRenderer } from "../modules/render/article.renderer.ts";
@@ -22,6 +23,11 @@ import {
   WorkflowStep,
 } from "../works/workflow.ts";
 import { WorkflowTerminateError } from "../works/workflow-error.ts";
+import {
+  archiveDraft,
+  markArchivedDraftPublished,
+  readPublishFailure,
+} from "./draft-archive.ts";
 import { resolveCover } from "@src/utils/image/cover-fallback.ts";
 import ProgressBar from "@deno-library/progress";
 
@@ -34,11 +40,22 @@ const logger = {
 interface WeixinWorkflowEnv {
   name: string;
   draftWriter?: (draft: { title: string; html: string; workflowType: string }) => Promise<unknown>;
+  draftStatusWriter?: (
+    id: string,
+    status: "draft" | "published",
+  ) => Promise<unknown>;
 }
 
 // 工作流参数类型定义
 interface WeixinWorkflowParams {
-  sourceType?: "all" | "firecrawl" | "twitter" | "twitter-cookie";
+  // x-search：X 关键词全网搜索，走浏览器自动化（skill: x-search-collector）。
+  // 与 twitter/twitter-cookie（固定账号时间线）是两种不同的数据源，不能用关键词互相替代。
+  sourceType?:
+    | "all"
+    | "firecrawl"
+    | "twitter"
+    | "twitter-cookie"
+    | "x-search";
   maxArticles?: number;
   forcePublish?: boolean;
   publish?: boolean;
@@ -68,6 +85,7 @@ export class WeixinArticleWorkflow
     this.scraper.set("twitter", new TwitterScraper());
     this.scraper.set("twitter-cookie", new TwitterCookieScraper());
     this.scraper.set("twitter-frontend", new TwitterFrontendScraper());
+    this.scraper.set("x-search", new XSearchScraper());
     this.summarizer = new AISummarizer();
     this.publisher = new WeixinPublisher();
     this.notifier = new BarkNotifier();
@@ -102,6 +120,17 @@ export class WeixinArticleWorkflow
       });
 
       const sourceType = event.payload.sourceType ?? "all";
+
+      // 关键词必须在选源之前解析：x-search 源的关键词不是「事后过滤器」，而是「搜什么」本身。
+      const includeKeywords = Array.isArray(event.payload.includeKeywords)
+        ? event.payload.includeKeywords.filter((x) => typeof x === "string")
+          .map((x) => x.trim()).filter(Boolean)
+        : [];
+      const excludeKeywords = Array.isArray(event.payload.excludeKeywords)
+        ? event.payload.excludeKeywords.filter((x) => typeof x === "string")
+          .map((x) => x.trim()).filter(Boolean)
+        : [];
+
       const selectedFirecrawl = sourceType === "all" || sourceType === "firecrawl"
         ? sourceConfigs.firecrawl
         : [];
@@ -112,11 +141,21 @@ export class WeixinArticleWorkflow
         sourceType === "all" || sourceType === "twitter-cookie"
           ? sourceConfigs["twitter-cookie"] || []
           : [];
+      // x-search 不进 all：它要开着 Chrome、靠本机代理、单次约 1 分钟，
+      // 把它塞进 all 会让每次「全量跑」都变成一次浏览器自动化，且失败时拖垮整条流程。
+      // 要它就显式选。
+      const selectedXSearch = sourceType === "x-search"
+        ? includeKeywords.map((query) => ({ identifier: query }))
+        : [];
       const totalSources = selectedFirecrawl.length + selectedTwitter.length +
-        selectedTwitterCookie.length;
+        selectedTwitterCookie.length + selectedXSearch.length;
 
       if (totalSources === 0) {
-        throw new WorkflowTerminateError("未配置任何数据源");
+        throw new WorkflowTerminateError(
+          sourceType === "x-search"
+            ? "X 关键词搜索需要至少一个关键词（搜索词取自「包含关键词」）"
+            : "未配置任何数据源",
+        );
       }
 
       logger.info(`[数据源] 发现 ${totalSources} 个数据源`);
@@ -163,21 +202,6 @@ export class WeixinArticleWorkflow
         if (!twitterScraper) {
           throw new WorkflowTerminateError("TwitterScraper not found");
         }
-
-        for (const source of selectedTwitter) {
-          const sourceContents = await this.scrapeSource(
-            "Twitter",
-            source,
-            twitterScraper,
-          );
-          contents.push(...sourceContents);
-          totalArticles += sourceContents.length;
-          await scrapeProgress.render(++scrapeCompleted, {
-            title:
-              `抓取 Twitter: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
-          });
-        }
-
         const twitterCookieScraper = this.scraper.get("twitter-cookie");
         if (!twitterCookieScraper) {
           throw new WorkflowTerminateError("TwitterCookieScraper not found");
@@ -185,6 +209,28 @@ export class WeixinArticleWorkflow
         const twitterFrontendScraper = this.scraper.get("twitter-frontend");
         if (!twitterFrontendScraper) {
           throw new WorkflowTerminateError("TwitterFrontendScraper not found");
+        }
+        const xSearchScraper = this.scraper.get("x-search");
+        if (!xSearchScraper) {
+          throw new WorkflowTerminateError("XSearchScraper not found");
+        }
+
+        for (const source of selectedTwitter) {
+          // twitterapi.io 欠费(402)或没配 key 时，不能让整条流程直接空手而归：
+          // 回退到的 syndication 时间线是免密钥的，能保证有稿可出。
+          const sourceContents = await this.scrapeSourceWithFallback(
+            "Twitter",
+            source,
+            twitterScraper,
+            "Twitter Frontend",
+            twitterFrontendScraper,
+          );
+          contents.push(...sourceContents);
+          totalArticles += sourceContents.length;
+          await scrapeProgress.render(++scrapeCompleted, {
+            title:
+              `抓取 Twitter: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+          });
         }
 
         for (const source of selectedTwitterCookie) {
@@ -203,29 +249,72 @@ export class WeixinArticleWorkflow
           });
         }
 
-        this.stats.contents = contents.length;
+        // X 关键词全网搜索：调用 skill x-search-collector（浏览器自动化）。
+        // 这里故意不走 scrapeSource/scrapeSourceWithFallback：
+        //   1. 没有等价回退源 —— fallback 到账号时间线会给出「与关键词无关的内容」却当成功，
+        //      比直接失败更坏；
+        //   2. 不能吞错 —— 用户是显式选的这个源，失败时必须把「代理没开 / 扩展离线 /
+        //      未登录 X」这类可操作原因原样抛出，而不是退化成一个“未获取到任何内容”。
+        for (const source of selectedXSearch) {
+          logger.debug(`[X搜索] 抓取: ${source.identifier}`);
+          try {
+            const sourceContents = await xSearchScraper.scrape(source.identifier);
+            this.stats.success++;
+            contents.push(...sourceContents);
+            totalArticles += sourceContents.length;
+            await scrapeProgress.render(++scrapeCompleted, {
+              title:
+                `X搜索: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+            });
+          } catch (error) {
+            this.stats.failed++;
+            const message = error instanceof Error
+              ? error.message
+              : String(error);
+            logger.error(`[X搜索] ${source.identifier} 抓取失败:`, message);
+            await this.notifier.warning(
+              "X搜索抓取失败",
+              `关键词: ${source.identifier}\n${message}`,
+            );
+            throw new WorkflowTerminateError(
+              `X 搜索采集失败（关键词: ${source.identifier}）：${message}`,
+            );
+          }
+        }
+
+        // twitter 与 twitter-cookie 两个源现在都可能落到同一条 syndication 时间线，
+        // 不按 id 去重会把同一条推文重复写进同一篇文章。
+        const seenIds = new Set<string>();
+        const deduped = contents.filter((content) => {
+          const key = String(content.id || content.url || "").trim();
+          if (!key) return true;
+          if (seenIds.has(key)) return false;
+          seenIds.add(key);
+          return true;
+        });
+        if (deduped.length !== contents.length) {
+          logger.info(`[去重] ${contents.length} → ${deduped.length}`);
+        }
+
+        this.stats.contents = deduped.length;
         if (this.stats.contents === 0) {
           throw new WorkflowTerminateError("未获取到任何内容，流程终止");
         }
 
-        return contents;
+        return deduped;
       });
 
-      const includeKeywords = Array.isArray(event.payload.includeKeywords)
-        ? event.payload.includeKeywords.filter((x) => typeof x === "string")
-          .map((x) => x.trim()).filter(Boolean)
-        : [];
-      const excludeKeywords = Array.isArray(event.payload.excludeKeywords)
-        ? event.payload.excludeKeywords.filter((x) => typeof x === "string")
-          .map((x) => x.trim()).filter(Boolean)
-        : [];
-
+      // 关键词过滤只对「按时间线/站点抓来的内容」有意义，对 x-search 不适用：
+      // x-search 的关键词是搜索请求本身，X 的检索是宽匹配——用同一个词再筛一遍正文，
+      // 会把「搜到了但正文没字面命中」的内容全剔掉，最后报「过滤后无可用内容」。
+      // 这正是之前「设了 GEO 却一条都没有」的假故障成因。
       const filteredContents = allContents.filter((content) => {
         const text = `${content.title ?? ""}\n${content.content ?? ""}`.toLowerCase();
         if (excludeKeywords.length > 0) {
           const hit = excludeKeywords.some((k) => text.includes(k.toLowerCase()));
           if (hit) return false;
         }
+        if (content.metadata?.platform === "x-search") return true;
         if (includeKeywords.length > 0) {
           return includeKeywords.some((k) => text.includes(k.toLowerCase()));
         }
@@ -377,18 +466,22 @@ export class WeixinArticleWorkflow
         : event.payload.forcePublish
         ? true
         : (event.payload.publish ?? true);
-      if (publishMode === "draft") {
-        const draftWriter = this.env.env.draftWriter;
-        if (draftWriter) {
-          await draftWriter({
-            title: summaryTitle,
-            html: renderedTemplate,
-            workflowType: "weixin-article",
-          });
-        }
-      }
+
+      // 「真发 + 归档」：不论哪种发布方式都先落一份本地草稿，再决定要不要发。
+      // 顺序不能反——反过来的话，发布一旦失败（IP 白名单/限流/网络），
+      // 文章连本地都不剩，整轮白跑。
+      const archivedDraftId = await archiveDraft(
+        this.env.env,
+        {
+          title: summaryTitle,
+          html: renderedTemplate,
+          workflowType: "weixin-article",
+        },
+        logger,
+      );
+
       if (shouldPublish) {
-        await step.do("publish-article", {
+        const publishResult = await step.do("publish-article", {
           retries: { limit: 3, delay: "10 second", backoff: "exponential" },
           timeout: "5 minutes",
         }, async () => {
@@ -399,8 +492,19 @@ export class WeixinArticleWorkflow
             thumbMediaId: mediaId,
           });
         });
+
+        // publish() 用返回值报错、不抛异常：不查 success 就会出现
+        // 「工作流显示成功、实际什么都没发出去」。本地草稿已在上一步存好，
+        // 所以这里直接失败是安全的——内容不会丢。
+        const failure = readPublishFailure(publishResult);
+        if (failure) {
+          throw new WorkflowTerminateError(
+            `发布失败（内容已归档到本地草稿箱）：${failure}`,
+          );
+        }
+        await markArchivedDraftPublished(this.env.env, archivedDraftId, logger);
       } else {
-        logger.info("[发布] 已跳过发布");
+        logger.info("[发布] 已跳过发布（存档模式）");
       }
 
       // 8. 完成报告

@@ -224,6 +224,22 @@
         color: var(--muted);
       }
 
+      /* .field 是 flex，[hidden] 默认的 display:none 会被它盖掉 */
+      .field[hidden] {
+        display: none;
+      }
+
+      .field-hint {
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--muted);
+        opacity: 0.85;
+      }
+
+      #workflow-keywords-field {
+        grid-column: 1 / -1;
+      }
+
       .field input,
       .field select {
         background: rgba(255, 255, 255, 0.06);
@@ -849,11 +865,17 @@
                 <option value="firecrawl">Firecrawl</option>
                 <option value="twitter">Twitter</option>
                 <option value="twitter-cookie">Twitter Cookie</option>
+                <option value="x-search">X 关键词搜索（浏览器采集）</option>
               </select>
             </label>
             <label class="field">
               入选数量
               <input id="workflow-max" type="number" min="1" max="50" placeholder="默认 10">
+            </label>
+            <label class="field" id="workflow-keywords-field" hidden>
+              搜索关键词
+              <input id="workflow-keywords" type="text" placeholder='多个用逗号分隔，如：GEO优化, "AI coding agent"'>
+              <small class="field-hint">仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索（约 1~2 分钟）。需 Chrome 已登录 X 且本机代理在线。</small>
             </label>
             <label class="field">
               HelloGitHub 数量
@@ -862,9 +884,10 @@
             <label class="field">
               发布方式
               <select id="workflow-publish-mode">
-                <option value="immediate">立即发布</option>
-                <option value="draft">保存到草稿箱</option>
+                <option value="draft">只存本地草稿</option>
+                <option value="immediate">立即发布到公众号</option>
               </select>
+              <small class="field-hint" id="workflow-publish-hint">只存本地草稿，不上传微信。</small>
             </label>
           </div>
         </div>
@@ -1584,8 +1607,9 @@
           sourceType: "all",
           maxArticles: null,
           maxItems: null,
+          includeKeywords: [],
           publish: false,
-          publishMode: "immediate",
+          publishMode: "draft",
         },
       });
 
@@ -1679,6 +1703,7 @@
           "workflow-source",
           "workflow-max",
           "workflow-max-items",
+          "workflow-keywords",
           "workflow-publish-mode",
           "core-article-max",
           "core-heat",
@@ -1764,7 +1789,9 @@
         getEl("workflow-source").value = settings.run.sourceType || "all";
         getEl("workflow-max").value = settings.run.maxArticles ?? "";
         getEl("workflow-max-items").value = settings.run.maxItems ?? "";
-        getEl("workflow-publish-mode").value = settings.run.publishMode || "immediate";
+        getEl("workflow-publish-mode").value = settings.run.publishMode || "draft";
+        syncPublishModeHint();
+        getEl("workflow-keywords").value = (settings.run.includeKeywords || []).join(", ");
 
         getEl("core-article-max").value = settings.core.article.maxArticles ?? 20;
         getEl("core-heat").value = settings.core.article.heatWeight ?? 0.3;
@@ -1784,13 +1811,17 @@
         const runSource = getEl("workflow-source").value || "all";
         const runMax = getEl("workflow-max").value;
         const runMaxItems = getEl("workflow-max-items").value;
-        const runPublishMode = getEl("workflow-publish-mode").value || "immediate";
+        const runPublishMode = getEl("workflow-publish-mode").value || "draft";
 
         next.run.workflowType = runType;
         next.run.sourceType = runSource;
         next.run.maxArticles = runMax ? Number(runMax) : null;
         next.run.maxItems = runMaxItems ? Number(runMaxItems) : null;
         next.run.publishMode = runPublishMode;
+        next.run.includeKeywords = String(getEl("workflow-keywords").value || "")
+          .split(/[,，\n]/)
+          .map((x) => x.trim())
+          .filter(Boolean);
 
         const coreMax = getEl("core-article-max").value;
         const coreHeat = getEl("core-heat").value;
@@ -1820,6 +1851,30 @@
         getEl("workflow-source").disabled = !isArticle;
         getEl("workflow-max").disabled = !isArticle;
         getEl("workflow-max-items").disabled = !isHello;
+
+        // 关键词框只在选「X 关键词搜索」时出现。其他来源里这个框没有对应语义，
+        // 摆着只会让人以为它能给 Twitter 账号时间线做全网搜索。
+        // 它同时兼当「包含关键词」过滤器，所以只在 non-article 时禁用，不隐藏。
+        const keywordsField = getEl("workflow-keywords-field");
+        const sourceEl = getEl("workflow-source");
+        if (keywordsField) {
+          keywordsField.hidden = !isArticle || sourceEl.value !== "x-search";
+        }
+      };
+
+      /**
+       * 发布方式的提示文案。
+       *
+       * 必须诚实说明一件事：「立即发布」实际做的是**创建公众号草稿**，
+       * 本项目里没有群发（freepublish / mass）调用（见 WeixinPublisher.publish → draft/add）。
+       * 之前这里只写「立即发布」四个字，容易让人以为点下去粉丝就收到了。
+       */
+      const syncPublishModeHint = () => {
+        const hint = getEl("workflow-publish-hint");
+        if (!hint) return;
+        hint.textContent = getEl("workflow-publish-mode").value === "immediate"
+          ? "会真实调微信接口，提交后进公众号后台的草稿箱（本项不代为群发）；失败时本地草稿仍在。"
+          : "只存本地草稿，不上传微信。";
       };
 
       const attachDirtyListeners = () => {
@@ -1828,6 +1883,7 @@
           "workflow-source",
           "workflow-max",
           "workflow-max-items",
+          "workflow-keywords",
           "workflow-publish-mode",
           "core-article-max",
           "core-heat",
@@ -1841,8 +1897,12 @@
           el.addEventListener("input", () => markDirty(true));
           el.addEventListener("change", () => {
             markDirty(true);
-            if (id === "workflow-type") {
+            // 来源类型也要重算：关键词框只在「X 关键词搜索」时出现
+            if (id === "workflow-type" || id === "workflow-source") {
               syncWorkflowState();
+            }
+            if (id === "workflow-publish-mode") {
+              syncPublishModeHint();
             }
           });
         });
@@ -1853,15 +1913,19 @@
         if (type === "weixin-article") {
           const sourceType = settings.run.sourceType || settings.core.article.sourceType;
           const maxArticles = settings.run.maxArticles ?? settings.core.article.maxArticles;
-          const publishMode = settings.run.publishMode || "immediate";
-          const publish = publishMode === "draft"
-            ? false
-            : (settings.run.publish ?? settings.core.article.publish);
+          const publishMode = settings.run.publishMode || "draft";
+          // publish 必须由 publishMode 推导，不再跟 core.article.publish 走。
+          // 旧写法 `publishMode==="draft" ? false : core.article.publish` 配上默认 false 的
+          // core.article.publish，会让「立即发布」发出 publish:false ——
+          // 工作流把它理解成「不发布」，结果既不真发、也不存草稿（immediate 模式跳过 draftWriter），
+          // 文章生成完就被丢掉。这是本次修的真问题。
+          const publish = publishMode === "immediate";
           return {
             type,
             payload: {
               sourceType,
               maxArticles,
+              includeKeywords: settings.run.includeKeywords,
               publish,
               publishMode,
               heatWeight: settings.core.article.heatWeight,
@@ -1873,17 +1937,17 @@
         }
         if (type === "weixin-hellogithub") {
           const maxItems = settings.run.maxItems ?? settings.core.hellogithub.maxItems;
-          const publishMode = settings.run.publishMode || "immediate";
-          const publish = publishMode === "draft"
-            ? false
-            : (settings.run.publish ?? settings.core.hellogithub.publish);
-          return { type, payload: { maxItems, publish, publishMode } };
+          const publishMode = settings.run.publishMode || "draft";
+          return {
+            type,
+            payload: { maxItems, publish: publishMode === "immediate", publishMode },
+          };
         }
-        const publishMode = settings.run.publishMode || "immediate";
-        const publish = publishMode === "draft"
-          ? false
-          : (settings.run.publish ?? settings.core.aibench.publish);
-        return { type, payload: { publish, publishMode } };
+        const publishMode = settings.run.publishMode || "draft";
+        return {
+          type,
+          payload: { publish: publishMode === "immediate", publishMode },
+        };
       };
 
       const loadSettings = async () => {
@@ -1950,6 +2014,24 @@
             showToast("请先保存配置");
             return;
           }
+
+          // 「立即发布」会真的调微信接口（见下方同步逻辑与提示文案）。
+          // 必须给一次看清具体参数再确认的机会——发布不可撤销。
+          if (getEl("workflow-publish-mode").value === "immediate") {
+            const ok = window.confirm(
+              "确认立即发布到微信公众号？\n\n" +
+                "• 会真实提交到公众号（微信侧不支持撤销）\n" +
+                "• 不论选哪种方式，都会先存一份本地草稿，发布失败不会丢内容\n" +
+                `• 工作流类型：${getEl("workflow-type").value}\n` +
+                `• 来源类型：${getEl("workflow-source").value || "all"}\n\n` +
+                "只想存本地草稿，选「只存本地草稿」。",
+            );
+            if (!ok) {
+              showToast("已取消，未运行", "info");
+              return;
+            }
+          }
+
           runButton.classList.add("loading");
           try {
             const next = collectUI();
