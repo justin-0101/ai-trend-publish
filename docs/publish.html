@@ -234,6 +234,22 @@
         font-size: 13px;
       }
 
+      /* .field 是 flex，[hidden] 默认的 display:none 会被它盖掉 */
+      .field[hidden] {
+        display: none;
+      }
+
+      .field-hint {
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--muted);
+        opacity: 0.85;
+      }
+
+      #publish-keywords-field {
+        grid-column: 1 / -1;
+      }
+
       .toggle {
         display: flex;
         align-items: center;
@@ -620,7 +636,7 @@
           <div class="search">搜索发布记录</div>
           <div class="top-actions">
             <div class="pill">草稿箱</div>
-            <button class="run-btn" id="run-publish" type="button">立即发布</button>
+            <button class="run-btn" id="run-publish" type="button">生成草稿</button>
           </div>
         </div>
         <div class="ip-warning" id="ip-warning" hidden>
@@ -678,15 +694,25 @@
                 <option value="firecrawl">Firecrawl</option>
                 <option value="twitter">Twitter</option>
                 <option value="twitter-cookie">Twitter Cookie</option>
+                <option value="x-search">X 关键词搜索（浏览器采集）</option>
               </select>
             </label>
             <label class="field">
               最大入选
               <input id="publish-max" type="number" min="1" max="50" placeholder="默认 10">
             </label>
-            <label class="toggle">
-              <input id="publish-force" type="checkbox" checked>
-              强制发布
+            <label class="field" id="publish-keywords-field" hidden>
+              搜索关键词（多个用逗号分隔）
+              <input id="publish-keywords" type="text" placeholder='如：GEO优化, "generative engine optimization"'>
+              <small class="field-hint">仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索。采集需 Chrome 已登录 X 且代理在线。</small>
+            </label>
+            <label class="field">
+              发布方式
+              <select id="publish-mode">
+                <option value="draft">保存到草稿箱</option>
+                <option value="immediate">立即发布到公众号</option>
+              </select>
+              <small class="field-hint" id="publish-mode-hint">生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。</small>
             </label>
           </div>
         </div>
@@ -735,14 +761,62 @@
     <script>
       /* showToast 由公共文件 js/ui-toast.js 提供（顶部居中 + success/error/info 三态） */
 
+      /**
+       * 发布方式是发布中心里最危险的一个字段：
+       * `draft` = 只生成草稿（安全），`immediate` = 真实推送到公众号（公开可见、不可撤销）。
+       * 默认必须是 draft——之前这个页面把 publish:true 写死在请求体里，按钮还叫「立即发布」，
+       * 点一下就是一次真实发布，不存在“先看一眼”的中间态。
+       */
+      const PUBLISH_MODE_LABELS = {
+        draft: { button: "生成草稿", hint: "生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。" },
+        immediate: { button: "立即发布", hint: "⚠️ 会真实推送到微信公众号，公开可见；微信侧不支持撤销。" },
+      };
+
+      const publishModeSelect = document.getElementById("publish-mode");
+      const getPublishMode = () =>
+        publishModeSelect && publishModeSelect.value === "immediate" ? "immediate" : "draft";
+
+      /** 按钮文案 + 提示随发布方式联动，避免「按钮写立即发布、实际不发」这种谎报 */
+      const syncPublishMode = () => {
+        const mode = getPublishMode();
+        const label = PUBLISH_MODE_LABELS[mode];
+        const button = document.getElementById("run-publish");
+        if (button) button.textContent = label.button;
+        const hint = document.getElementById("publish-mode-hint");
+        if (hint) hint.textContent = label.hint;
+      };
+
+      if (publishModeSelect) {
+        publishModeSelect.addEventListener("change", syncPublishMode);
+      }
+
       const runButton = document.getElementById("run-publish");
       if (runButton) {
         runButton.addEventListener("click", async () => {
+          const source = document.getElementById("publish-source");
+          const max = document.getElementById("publish-max");
+          const keywords = document.getElementById("publish-keywords");
+          const mode = getPublishMode();
+
+          // 立即发布是不可撤销的对外动作，必须给一次「看清楚再确认」的机会。
+          // confirm() 而不是 toast：toast 不阻断、挡不住误点，而误点的代价是公开推文。
+          if (mode === "immediate") {
+            const ok = window.confirm(
+              "确认立即发布到微信公众号？\n\n" +
+                "• 会真实推送到公众号，公开可见\n" +
+                "• 微信侧不支持撤销\n" +
+                `• 来源类型：${source ? source.value : "all"}\n` +
+                `• 最大入选：${max && max.value ? max.value : "默认"}\n\n` +
+                "只想先生成草稿，选「保存到草稿箱」。",
+            );
+            if (!ok) {
+              showToast("已取消，未发布", "info");
+              return;
+            }
+          }
+
           runButton.classList.add("loading");
           try {
-            const source = document.getElementById("publish-source");
-            const max = document.getElementById("publish-max");
-            const force = document.getElementById("publish-force");
             const response = await fetch("/api/workflows/run", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -751,17 +825,26 @@
                 payload: {
                   sourceType: source ? source.value : "all",
                   maxArticles: max && max.value ? Number(max.value) : undefined,
-                  forcePublish: force ? force.checked : true,
-                  publish: true,
+                  includeKeywords: keywords && keywords.value.trim()
+                    ? keywords.value.split(/[,，\n]/).map((s) => s.trim()).filter(Boolean)
+                    : undefined,
+                  publishMode: mode,
+                  // publish 必须由 publishMode 推导，不单独设开关：
+                  // 两个字段各说各话时，工作流里 forcePublish 的优先级会覆盖掉 draft，
+                  // 结果就是「明明选了草稿却发了出去」。
+                  publish: mode === "immediate",
                 },
               }),
             });
             if (!response.ok) {
               throw new Error("workflow failed");
             }
-            showToast("发布请求已触发", "success");
+            showToast(
+              mode === "immediate" ? "发布请求已触发" : "草稿生成请求已触发",
+              "success",
+            );
           } catch {
-            showToast("发布触发失败", "error");
+            showToast("触发失败", "error");
           } finally {
             runButton.classList.remove("loading");
           }
@@ -906,6 +989,20 @@
         const targetId = id || currentDraftId;
         if (!targetId) {
           showToast("请先选择草稿", "error");
+          return;
+        }
+        // 单篇「立即发布」同样是不可撤销的对外动作，同样要过一次确认。
+        const draftTitle = draftTitleInput && draftTitleInput.value
+          ? draftTitleInput.value
+          : "（无标题）";
+        const ok = window.confirm(
+          "确认把这篇草稿发布到微信公众号？\n\n" +
+            `• 标题：${draftTitle}\n` +
+            "• 发布后公开可见，微信侧不支持撤销\n\n" +
+            "只想存着不发，点「关闭」或「保存修改」。",
+        );
+        if (!ok) {
+          showToast("已取消，未发布", "info");
           return;
         }
         draftPublishButton?.classList.add("loading");
@@ -1097,11 +1194,28 @@
       };
       const sourceSelect = document.getElementById("publish-source");
       const maxInput = document.getElementById("publish-max");
-      const forceInput = document.getElementById("publish-force");
+      const keywordsField = document.getElementById("publish-keywords-field");
+      const keywordsInput = document.getElementById("publish-keywords");
+
+      // 关键词框只在选「X 关键词搜索」时出现：别的来源里这个框没有对应语义，
+      // 一直摆着只会让人以为它也能给 Twitter 账号时间线做全网搜索。
+      const syncKeywordsVisibility = () => {
+        if (!keywordsField || !sourceSelect) return;
+        keywordsField.hidden = sourceSelect.value !== "x-search";
+      };
+      if (sourceSelect) syncKeywordsVisibility();
+
+      if (keywordsInput) {
+        keywordsInput.value = applyStored("tp.publish.keywords", "");
+        keywordsInput.addEventListener("input", () => {
+          window.localStorage.setItem("tp.publish.keywords", keywordsInput.value);
+        });
+      }
       if (sourceSelect) {
         sourceSelect.value = applyStored("tp.publish.source", "all");
         sourceSelect.addEventListener("change", () => {
           window.localStorage.setItem("tp.publish.source", sourceSelect.value);
+          syncKeywordsVisibility();
         });
       }
       if (maxInput) {
@@ -1110,12 +1224,17 @@
           window.localStorage.setItem("tp.publish.max", maxInput.value);
         });
       }
-      if (forceInput) {
-        forceInput.checked = applyStored("tp.publish.force", "true") === "true";
-        forceInput.addEventListener("change", () => {
-          window.localStorage.setItem("tp.publish.force", forceInput.checked ? "true" : "false");
+
+      // 默认必须是 draft：这个键只在用户主动选过「立即发布」后才会变成 immediate。
+      // 之前有一个默认勾选的「强制发布」复选框，已删除——它在这个页面里是空转的
+      // （工作流只看 publish/publishMode），却会让人以为“不勾就安全”。
+      if (publishModeSelect) {
+        publishModeSelect.value = applyStored("tp.publish.mode", "draft");
+        publishModeSelect.addEventListener("change", () => {
+          window.localStorage.setItem("tp.publish.mode", publishModeSelect.value);
         });
       }
+      syncPublishMode();
     </script>
   </body>
 </html>
