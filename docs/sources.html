@@ -32,11 +32,20 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family:
+          "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
-          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          radial-gradient(
+            circle at 20% 20%,
+            rgba(246, 200, 89, 0.2),
+            transparent 45%
+          ),
+          radial-gradient(
+          circle at 80% 10%,
+          rgba(110, 231, 183, 0.18),
+          transparent 40%
+        ),
           linear-gradient(180deg, var(--bg), var(--bg-deep));
         min-height: 100vh;
       }
@@ -277,6 +286,20 @@
         font-weight: 600;
       }
 
+      .panel-title-actions,
+      .source-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* 操作区（启用标签 + 删除按钮）不允许被压缩：
+         采集源面板只占 5/12 宽度，行内容一长，flex 会先压这里，
+         把“启用”、“删除”挤成竖排两个字。 */
+      .source-row-actions {
+        flex: none;
+      }
+
       .sources {
         grid-column: span 5;
         display: grid;
@@ -292,7 +315,10 @@
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
         cursor: pointer;
-        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease,
+          transform 0.2s ease;
       }
 
       .source-row:hover {
@@ -305,12 +331,47 @@
         background: rgba(246, 200, 89, 0.08);
       }
 
+      .source-main {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding-right: 8px;
+      }
+
+      .source-main .muted {
+        overflow-wrap: anywhere;
+      }
+
+      .delete-source-btn {
+        padding: 6px 9px;
+        border-radius: 10px;
+        border: 1px solid rgba(244, 114, 182, 0.28);
+        background: rgba(244, 114, 182, 0.08);
+        color: #f9a8d4;
+        font-size: 12px;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .delete-source-btn:hover {
+        background: rgba(244, 114, 182, 0.15);
+        border-color: rgba(244, 114, 182, 0.48);
+      }
+
+      .delete-source-btn:disabled,
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       .tag {
         padding: 4px 10px;
         border-radius: 999px;
         font-size: 11px;
         background: rgba(110, 231, 183, 0.15);
         color: #b7f3d9;
+        /* 关键：标签文字一律单行，否则窄行里“启用”会折成两行，看起来像竖排 */
+        white-space: nowrap;
+        flex: none;
       }
 
       .muted {
@@ -376,6 +437,11 @@
         cursor: pointer;
       }
 
+      select option {
+        color: #1f2937;
+        background-color: #f9fafb;
+      }
+
       .results {
         grid-column: span 12;
       }
@@ -408,14 +474,28 @@
           TrendPublish
         </div>
         <nav class="nav">
-          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
-          <a class="nav-item active" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
-          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
-          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
-          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
-          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
-          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
-          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+          <a class="nav-item" href="prototype.html"><span>概览</span><span
+              class="nav-badge"
+            >6</span></a>
+          <a class="nav-item active" href="sources.html"><span
+            >采集源</span><span class="nav-badge">4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span
+              class="nav-badge"
+            >8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span
+              class="nav-badge"
+            >3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span
+              class="nav-badge"
+            >2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span
+              class="nav-badge"
+            >14</span></a>
+          <a class="nav-item" href="templates.html#library"><span
+            >模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span
+              class="nav-badge"
+            >1</span></a>
         </nav>
         <div class="sidebar-card">
           <h4>采集策略</h4>
@@ -426,15 +506,19 @@
         <div class="topbar">
           <div class="search">搜索来源或规则</div>
           <div class="top-actions">
-            <div class="pill">启用中 3</div>
-            <button class="run-btn" id="run-sources" type="button">试跑选中源</button>
+            <div class="pill" id="enabled-count">启用中 0</div>
+            <button class="run-btn" id="run-sources" type="button">
+              试跑选中源
+            </button>
           </div>
         </div>
         <section class="grid">
           <div class="panel sources">
             <div class="panel-title">
               <h3>采集源列表</h3>
-              <span class="pill">可编辑</span>
+              <div class="panel-title-actions">
+                <span class="pill">固定预置</span>
+              </div>
             </div>
             <div id="source-list"></div>
           </div>
@@ -446,23 +530,48 @@
             <div class="muted" id="source-hint">请先选择左侧采集源</div>
             <div class="config-row">
               <strong>抓取频率(分钟)</strong>
-              <input id="rule-frequency" type="number" min="1" max="1440" placeholder="例如 30">
+              <input
+                id="rule-frequency"
+                type="number"
+                min="1"
+                max="1440"
+                placeholder="例如 30"
+              >
             </div>
             <div class="config-row">
               <strong>包含关键词</strong>
-              <textarea id="rule-include" placeholder="一行一个关键词（为空表示不限制）"></textarea>
+              <textarea
+                id="rule-include"
+                placeholder="一行一个关键词（为空表示不限制）"
+              ></textarea>
             </div>
             <div class="config-row">
               <strong>排除关键词</strong>
-              <textarea id="rule-exclude" placeholder="一行一个关键词（命中即过滤）"></textarea>
+              <textarea
+                id="rule-exclude"
+                placeholder="一行一个关键词（命中即过滤）"
+              ></textarea>
             </div>
             <div class="config-row">
               <strong>内容权重</strong>
-              <input id="rule-weight" type="number" min="0" max="5" step="0.1" placeholder="例如 1.0">
+              <input
+                id="rule-weight"
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                placeholder="例如 1.0"
+              >
             </div>
             <div class="config-row">
               <strong>最大入选</strong>
-              <input id="rule-max" type="number" min="1" max="50" placeholder="例如 10">
+              <input
+                id="rule-max"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="例如 10"
+              >
             </div>
             <div class="config-row">
               <strong>同步发布</strong>
@@ -472,8 +581,12 @@
               </select>
             </div>
             <div class="config-actions">
-              <button class="btn-secondary" id="reset-rule" type="button">重置</button>
-              <button class="run-btn" id="save-rule" type="button">保存配置</button>
+              <button class="btn-secondary" id="reset-rule" type="button">
+                重置
+              </button>
+              <button class="run-btn" id="save-rule" type="button">
+                保存配置
+              </button>
             </div>
           </div>
           <div class="panel results">
@@ -559,6 +672,7 @@
       var runButton = document.getElementById("run-sources");
       var saveButton = document.getElementById("save-rule");
       var resetButton = document.getElementById("reset-rule");
+      var enabledCountEl = document.getElementById("enabled-count");
 
       var sources = [];
       var selected = null;
@@ -567,7 +681,10 @@
 
       function setSelectedText() {
         if (!selectedLabel) return;
-        selectedLabel.textContent = getSourceHeaderText(selected, dirty);
+        selectedLabel.textContent = getSourceHeaderText(
+          selected,
+          dirty,
+        );
       }
 
       function syncSourceActions() {
@@ -607,10 +724,22 @@
         var weight = document.getElementById("rule-weight");
         var max = document.getElementById("rule-max");
         var publish = document.getElementById("rule-publish");
-        if (frequency) frequency.value = r.frequencyMinutes != null ? r.frequencyMinutes : "";
-        if (include) include.value = (r.includeKeywords || []).join("\n");
-        if (exclude) exclude.value = (r.excludeKeywords || []).join("\n");
-        if (weight) weight.value = r.priorityWeight != null ? r.priorityWeight : 1;
+        if (frequency) {
+          frequency.value = r.frequencyMinutes != null
+            ? r.frequencyMinutes
+            : "";
+        }
+        if (include) {
+          include.value = (r.includeKeywords || []).join("\n");
+        }
+        if (exclude) {
+          exclude.value = (r.excludeKeywords || []).join("\n");
+        }
+        if (weight) {
+          weight.value = r.priorityWeight != null
+            ? r.priorityWeight
+            : 1;
+        }
         if (max) max.value = r.maxArticles != null ? r.maxArticles : "";
         if (publish) publish.value = String(Boolean(r.publish));
         markDirty(false);
@@ -666,7 +795,8 @@
 
       function fetchRule(platform, identifier) {
         var url = apiBase + "/api/data-source-rules?platform=" +
-          encodeURIComponent(platform) + "&identifier=" + encodeURIComponent(identifier);
+          encodeURIComponent(platform) + "&identifier=" +
+          encodeURIComponent(identifier);
         return fetch(url).then(function (resp) {
           if (!resp.ok) return null;
           return resp.json().then(function (data) {
@@ -694,7 +824,38 @@
         if (platform === "twitter-cookie") {
           var match = identifier.match(/x\.com\/(.+?)(\?|$|\/)/);
           var handle = (match && match[1]) ? match[1] : identifier;
-          return { title: "Twitter Cookie / " + handle, desc: "Cookie 抓取" };
+          return {
+            title: "Twitter Cookie / " + handle,
+            desc: "Cookie 抓取",
+          };
+        }
+        if (platform === "rss") {
+          var feedHost = identifier;
+          try {
+            feedHost = new URL(identifier).hostname;
+          } catch (e) {
+            feedHost = identifier;
+          }
+          return { title: "RSS / " + feedHost, desc: identifier };
+        }
+        if (platform === "reddit") {
+          return {
+            title: "Reddit / " + identifier,
+            desc: "子版块时间线",
+          };
+        }
+        if (platform === "bilibili") {
+          var biliMode = identifier.indexOf("newlist") === 0
+            ? "分区最新"
+            : "综合热门";
+          return { title: "B站 / " + biliMode, desc: identifier };
+        }
+        if (platform === "zhihu") {
+          return {
+            title: "知乎 / " +
+              (identifier === "daily" ? "日报" : "热榜"),
+            desc: identifier,
+          };
         }
         return { title: platform, desc: identifier };
       }
@@ -702,11 +863,15 @@
       function renderSources() {
         if (!listEl) return;
         listEl.innerHTML = "";
+        // 角标要跟真实列表一致：写死“启用中 3”的话，加完源就是显眼的假信息
+        if (enabledCountEl) {
+          enabledCountEl.textContent = "启用中 " + sources.length;
+        }
         if (!sources.length) {
           var empty = document.createElement("div");
           empty.className = "muted";
           empty.style.padding = "8px 2px";
-          empty.textContent = "暂无采集源（请检查后端 /api/data-sources）";
+          empty.textContent = "暂无采集源，可点击右上角添加";
           listEl.appendChild(empty);
           return;
         }
@@ -716,6 +881,7 @@
             row.className = "source-row";
             row.dataset.id = item.id;
             var left = document.createElement("div");
+            left.className = "source-main";
             var title = document.createElement("strong");
             var formatted = formatSource(item);
             title.textContent = formatted.title;
@@ -724,14 +890,32 @@
             desc.textContent = formatted.desc;
             left.appendChild(title);
             left.appendChild(desc);
+
+            var actions = document.createElement("div");
+            actions.className = "source-row-actions";
             var tag = document.createElement("span");
             tag.className = "tag";
             tag.textContent = "启用";
+            var deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "delete-source-btn";
+            deleteButton.textContent = "删除";
+            deleteButton.setAttribute(
+              "aria-label",
+              "删除 " + formatted.title,
+            );
+            deleteButton.addEventListener("click", function (event) {
+              event.stopPropagation();
+              deleteSource(item, deleteButton);
+            });
+            actions.appendChild(tag);
+            actions.appendChild(deleteButton);
+
             row.appendChild(left);
-            row.appendChild(tag);
+            row.appendChild(actions);
             row.addEventListener("click", function () {
               if (dirty) {
-                showToast("请先保存当前修改");
+                showToast("请先保存当前修改", "info");
                 return;
               }
               selectSource(item);
@@ -746,7 +930,10 @@
         var rows = listEl.querySelectorAll(".source-row");
         for (var i = 0; i < rows.length; i++) {
           var row = rows[i];
-          row.classList.toggle("active", row.dataset.id === selected.id);
+          row.classList.toggle(
+            "active",
+            row.dataset.id === selected.id,
+          );
         }
       }
 
@@ -755,35 +942,93 @@
         highlightSelected();
         setSelectedText();
         syncSourceActions();
-        return fetchRule(item.platform, item.identifier).then(function (rules) {
-          lastSavedRule = rules || defaultRule();
-          fillForm(lastSavedRule);
-        });
+        return fetchRule(item.platform, item.identifier).then(
+          function (rules) {
+            lastSavedRule = rules || defaultRule();
+            fillForm(lastSavedRule);
+          },
+        );
       }
 
-      function loadSources() {
+      function clearSelection() {
+        selected = null;
+        lastSavedRule = null;
+        fillForm(defaultRule());
+        setSelectedText();
         syncSourceActions();
-        return fetch(apiBase + "/api/data-sources").then(function (resp) {
-          if (!resp.ok) {
-            showToast("加载采集源失败");
-            return null;
-          }
-          return resp.json();
-        }).then(function (data) {
-          if (!data) return;
+      }
+
+      function loadSources(preferredSource, silent) {
+        syncSourceActions();
+        var preferredId = preferredSource && preferredSource.id
+          ? preferredSource.id
+          : (selected ? selected.id : "");
+        return fetch(apiBase + "/api/data-sources").then(
+          function (resp) {
+            if (!resp.ok) {
+              showToast("加载采集源失败", "error");
+              return null;
+            }
+            return resp.json();
+          },
+        ).then(function (data) {
+          if (!data) return null;
           sources = Array.isArray(data.sources) ? data.sources : [];
           renderSources();
           if (!sources.length) {
-            showToast("未发现采集源");
+            clearSelection();
+            if (!silent) showToast("暂无采集源", "info");
             return null;
           }
-          setSelectedText();
-          syncSourceActions();
-          showToast("请先选择采集源");
+          var nextSelected = null;
+          for (var i = 0; i < sources.length; i++) {
+            if (sources[i].id === preferredId) {
+              nextSelected = sources[i];
+              break;
+            }
+          }
+          if (nextSelected) return selectSource(nextSelected);
+          clearSelection();
+          if (!silent) showToast("请先选择采集源", "info");
           return null;
         }).catch(function () {
-          showToast("加载采集源异常");
+          showToast("加载采集源异常", "error");
           return null;
+        });
+      }
+
+      function deleteSource(item, button) {
+        if (dirty) {
+          showToast("请先保存当前修改", "info");
+          return;
+        }
+        var formatted = formatSource(item);
+        if (
+          !window.confirm(
+            "确认删除采集源“" + formatted.title +
+              "”？\n\n注意：只是从列表里隐藏（源本身是代码里的固定预置），" +
+              "若要恢复，把 logs/ui-config.json 的 deletedDataSources 里对应那项删掉即可。\n" +
+              "该源的规则配置也会一并删除。",
+          )
+        ) {
+          return;
+        }
+        button.disabled = true;
+        var url = apiBase + "/api/data-sources?platform=" +
+          encodeURIComponent(item.platform) + "&identifier=" +
+          encodeURIComponent(item.identifier);
+        fetch(url, { method: "DELETE" }).then(function (resp) {
+          if (!resp.ok) throw new Error("delete failed");
+          if (selected && selected.id === item.id) clearSelection();
+          return loadSources(null, true);
+        }).then(function () {
+          showToast(
+            "已从列表移除（可用 ui-config.json 恢复）",
+            "success",
+          );
+        }).catch(function () {
+          button.disabled = false;
+          showToast("删除采集源失败", "error");
         });
       }
 
@@ -842,7 +1087,9 @@
             includeKeywords: r.includeKeywords || [],
             excludeKeywords: r.excludeKeywords || [],
           };
-          if (r.maxArticles != null) payload.maxArticles = r.maxArticles;
+          if (r.maxArticles != null) {
+            payload.maxArticles = r.maxArticles;
+          }
           fetch(apiBase + "/api/workflows/run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

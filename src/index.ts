@@ -1,6 +1,10 @@
 import { startCronJobs } from "@src/controllers/cron.ts";
 import { addWorkflowStepObserver } from "@src/works/workflow.ts";
 import { getDataSources } from "@src/data-sources/getDataSources.ts";
+import {
+  deleteDataSourcePreference,
+  normalizeDataSource,
+} from "@src/services/data-source-registry.ts";
 import { poolConnection } from "@src/db/db.ts";
 import { WeixinAIBenchWorkflow } from "@src/services/weixin-aibench.workflow.ts";
 import { WeixinArticleWorkflow } from "@src/services/weixin-article.workflow.ts";
@@ -21,7 +25,7 @@ import {
 } from "@src/providers/image-gen/zhipu-cogview4.image.ts";
 import { ConfigManager } from "@src/utils/config/config-manager.ts";
 import { Logger, LogLevel } from "@zilla/logger";
-import { join, extname } from "https://deno.land/std/path/mod.ts";
+import { extname, join } from "https://deno.land/std/path/mod.ts";
 
 type TimelineItem = {
   title: string;
@@ -135,7 +139,10 @@ const persistWorkflowJobs = async (): Promise<void> => {
 // 步骤级事件很密集，非终态写入做节流；终态强制写。
 const persistWorkflowJobsSoon = (force = false): void => {
   const now = Date.now();
-  if (!force && now - lastWorkflowJobsPersistAt < WORKFLOW_JOBS_PERSIST_INTERVAL_MS) {
+  if (
+    !force &&
+    now - lastWorkflowJobsPersistAt < WORKFLOW_JOBS_PERSIST_INTERVAL_MS
+  ) {
     return;
   }
   lastWorkflowJobsPersistAt = now;
@@ -247,14 +254,14 @@ const startConsoleCapture = (): void => {
     level: WorkflowJobLogLine["level"],
     original: (...args: unknown[]) => void,
   ) =>
-    (...args: unknown[]) => {
-      try {
-        appendJobLog(level, args.map(describeLogArg).join(" "));
-      } catch {
-        // 忽略捕获异常
-      }
-      original(...args);
-    };
+  (...args: unknown[]) => {
+    try {
+      appendJobLog(level, args.map(describeLogArg).join(" "));
+    } catch {
+      // 忽略捕获异常
+    }
+    original(...args);
+  };
 
   console.log = wrap("log", originalConsole.log);
   console.warn = wrap("warn", originalConsole.warn);
@@ -445,7 +452,9 @@ const updateDraftStatusById = async (
     ...current,
     status,
     updatedAt: now,
-    publishedAt: status === "published" ? (current.publishedAt ?? now) : current.publishedAt,
+    publishedAt: status === "published"
+      ? (current.publishedAt ?? now)
+      : current.publishedAt,
   };
   await writeDraftsFile(drafts);
   return true;
@@ -621,11 +630,15 @@ const makeSourceRuleKey = (platform: string, identifier: string) =>
 
 const compactSourceRule = (rule: Record<string, unknown>) => {
   const include = Array.isArray(rule.includeKeywords)
-    ? rule.includeKeywords.filter((x) => typeof x === "string").map((x) => x.trim())
+    ? rule.includeKeywords.filter((x) => typeof x === "string").map((x) =>
+      x.trim()
+    )
       .filter(Boolean)
     : [];
   const exclude = Array.isArray(rule.excludeKeywords)
-    ? rule.excludeKeywords.filter((x) => typeof x === "string").map((x) => x.trim())
+    ? rule.excludeKeywords.filter((x) => typeof x === "string").map((x) =>
+      x.trim()
+    )
       .filter(Boolean)
     : [];
   const compact = {
@@ -658,27 +671,45 @@ const expandSourceRule = (value: string | null) => {
 };
 
 const compactWorkflowSettings = (body: Record<string, unknown>) => {
-  const core = typeof body.core === "object" && body.core ? body.core as Record<string, unknown> : {};
-  const run = typeof body.run === "object" && body.run ? body.run as Record<string, unknown> : {};
+  const core = typeof body.core === "object" && body.core
+    ? body.core as Record<string, unknown>
+    : {};
+  const run = typeof body.run === "object" && body.run
+    ? body.run as Record<string, unknown>
+    : {};
   const coreArticle = typeof core.article === "object" && core.article
     ? core.article as Record<string, unknown>
     : {};
   const templates = Array.isArray(coreArticle.templates)
-    ? coreArticle.templates.filter((x) => typeof x === "string").map((x) => x.trim()).filter(Boolean)
+    ? coreArticle.templates.filter((x) => typeof x === "string").map((x) =>
+      x.trim()
+    ).filter(Boolean)
     : [];
   const c = {
     a: {
-      s: typeof coreArticle.sourceType === "string" ? coreArticle.sourceType : "all",
-      m: typeof coreArticle.maxArticles === "number" ? coreArticle.maxArticles : 20,
+      s: typeof coreArticle.sourceType === "string"
+        ? coreArticle.sourceType
+        : "all",
+      m: typeof coreArticle.maxArticles === "number"
+        ? coreArticle.maxArticles
+        : 20,
       p: coreArticle.publish === true ? 1 : 0,
-      h: typeof coreArticle.heatWeight === "number" ? coreArticle.heatWeight : 0.3,
-      q: typeof coreArticle.qualityWeight === "number" ? coreArticle.qualityWeight : 0.7,
+      h: typeof coreArticle.heatWeight === "number"
+        ? coreArticle.heatWeight
+        : 0.3,
+      q: typeof coreArticle.qualityWeight === "number"
+        ? coreArticle.qualityWeight
+        : 0.7,
       t: templates.join(","),
-      o: typeof coreArticle.output === "string" ? coreArticle.output : "html-weixin",
+      o: typeof coreArticle.output === "string"
+        ? coreArticle.output
+        : "html-weixin",
     },
   };
   const r = {
-    t: typeof run.workflowType === "string" ? run.workflowType : "weixin-article",
+    t: typeof run.workflowType === "string"
+      ? run.workflowType
+      : "weixin-article",
     s: typeof run.sourceType === "string" ? run.sourceType : "all",
     m: typeof run.maxArticles === "number" ? run.maxArticles : null,
     i: typeof run.maxItems === "number" ? run.maxItems : null,
@@ -711,9 +742,15 @@ const expandWorkflowSettings = (value: string | null) => {
     },
   };
   const parsed = safeJsonParse<Record<string, unknown>>(value, {});
-  const c = typeof parsed.c === "object" && parsed.c ? parsed.c as Record<string, unknown> : {};
-  const r = typeof parsed.r === "object" && parsed.r ? parsed.r as Record<string, unknown> : {};
-  const a = typeof c.a === "object" && c.a ? c.a as Record<string, unknown> : {};
+  const c = typeof parsed.c === "object" && parsed.c
+    ? parsed.c as Record<string, unknown>
+    : {};
+  const r = typeof parsed.r === "object" && parsed.r
+    ? parsed.r as Record<string, unknown>
+    : {};
+  const a = typeof c.a === "object" && c.a
+    ? c.a as Record<string, unknown>
+    : {};
   const templates = typeof a.t === "string" && a.t.length > 0
     ? a.t.split(",").map((x) => x.trim()).filter(Boolean)
     : base.core.article.templates;
@@ -722,11 +759,19 @@ const expandWorkflowSettings = (value: string | null) => {
       ...base.core,
       article: {
         ...base.core.article,
-        sourceType: typeof a.s === "string" ? a.s : base.core.article.sourceType,
-        maxArticles: typeof a.m === "number" ? a.m : base.core.article.maxArticles,
+        sourceType: typeof a.s === "string"
+          ? a.s
+          : base.core.article.sourceType,
+        maxArticles: typeof a.m === "number"
+          ? a.m
+          : base.core.article.maxArticles,
         publish: a.p === 1,
-        heatWeight: typeof a.h === "number" ? a.h : base.core.article.heatWeight,
-        qualityWeight: typeof a.q === "number" ? a.q : base.core.article.qualityWeight,
+        heatWeight: typeof a.h === "number"
+          ? a.h
+          : base.core.article.heatWeight,
+        qualityWeight: typeof a.q === "number"
+          ? a.q
+          : base.core.article.qualityWeight,
         templates,
         output: typeof a.o === "string" ? a.o : base.core.article.output,
       },
@@ -774,7 +819,8 @@ const readLogLines = async () => {
 };
 
 const countByKeywords = (lines: string[], keywords: string[]) => {
-  return lines.filter((line) => keywords.some((key) => line.includes(key))).length;
+  return lines.filter((line) => keywords.some((key) => line.includes(key)))
+    .length;
 };
 
 const buildOverview = async (): Promise<OverviewResponse> => {
@@ -790,11 +836,15 @@ const buildOverview = async (): Promise<OverviewResponse> => {
 
   const timelineCandidates = parsed
     .filter((item) =>
-      ["采集", "清洗", "渲染", "发布", "生成"].some((key) => item.message.includes(key))
+      ["采集", "清洗", "渲染", "发布", "生成"].some((key) =>
+        item.message.includes(key)
+      )
     )
     .slice(-3);
 
-  const timelineSource = timelineCandidates.length ? timelineCandidates : parsed.slice(-3);
+  const timelineSource = timelineCandidates.length
+    ? timelineCandidates
+    : parsed.slice(-3);
   const timeline = timelineSource.map((item) => ({
     title: item.message.split("·")[0] || item.message,
     time: item.timestamp.split(" ")[1]?.slice(0, 5) || item.timestamp,
@@ -834,7 +884,11 @@ const jsonResponse = (data: unknown, status = 200) =>
     },
   });
 
-type PreviewWorkflowType = "article" | "hellogithub" | "aibench" | "deep-article";
+type PreviewWorkflowType =
+  | "article"
+  | "hellogithub"
+  | "aibench"
+  | "deep-article";
 
 const clampNumber = (
   value: number | null,
@@ -989,8 +1043,8 @@ const ARTICLE_PREVIEW_VARIANTS: Record<string, ArticlePreviewVariant> = {
 };
 
 const buildArticlePreviewData = (count: number, templateType: string) => {
-  const variant = ARTICLE_PREVIEW_VARIANTS[templateType]
-    ?? ARTICLE_PREVIEW_VARIANTS.default;
+  const variant = ARTICLE_PREVIEW_VARIANTS[templateType] ??
+    ARTICLE_PREVIEW_VARIANTS.default;
   const now = new Date();
   return Array.from({ length: count }, (_, index) => ({
     id: `preview-${templateType}-${index + 1}`,
@@ -1109,7 +1163,10 @@ const updateDefaultArticleTemplate = async (templateType: string) => {
     : fallback.core as Record<string, unknown>;
   const article = typeof core.article === "object" && core.article
     ? core.article as Record<string, unknown>
-    : (fallback.core as Record<string, unknown>).article as Record<string, unknown>;
+    : (fallback.core as Record<string, unknown>).article as Record<
+      string,
+      unknown
+    >;
   const nextWorkflowSettings = {
     ...baseSettings,
     core: {
@@ -1387,9 +1444,13 @@ const startUiServer = () => {
       ) {
         return jsonResponse({ message: "Unsupported workflow type" }, 400);
       }
-      const payload =
-        body.payload && typeof body.payload === "object" ? body.payload : {};
-      const job = await runWorkflowJob(type, payload as Record<string, unknown>);
+      const payload = body.payload && typeof body.payload === "object"
+        ? body.payload
+        : {};
+      const job = await runWorkflowJob(
+        type,
+        payload as Record<string, unknown>,
+      );
       return jsonResponse(
         { jobId: job.id, status: job.status, type: job.type },
         202,
@@ -1414,7 +1475,9 @@ const startUiServer = () => {
       const list = drafts.map(({ html: _html, ...rest }) => rest);
       return jsonResponse({ drafts: list });
     }
-    const draftPublishMatch = url.pathname.match(/^\/api\/drafts\/([^/]+)\/publish$/);
+    const draftPublishMatch = url.pathname.match(
+      /^\/api\/drafts\/([^/]+)\/publish$/,
+    );
     if (draftPublishMatch) {
       if (request.method !== "POST") {
         return jsonResponse({ message: "Method Not Allowed" }, 405);
@@ -1459,18 +1522,41 @@ const startUiServer = () => {
       return jsonResponse({ message: "Method Not Allowed" }, 405);
     }
     if (url.pathname === "/api/data-sources") {
-      if (request.method !== "GET") {
-        return jsonResponse({ message: "Method Not Allowed" }, 405);
+      if (request.method === "GET") {
+        const sourceConfig = await getDataSources();
+        const sources = Object.entries(sourceConfig).flatMap((
+          [platform, items],
+        ) =>
+          items.map((item) => ({
+            platform,
+            identifier: item.identifier,
+            id: makeSourceKey(platform, item.identifier),
+          }))
+        );
+        return jsonResponse({ sources });
       }
-      const sourceConfig = await getDataSources();
-      const sources = Object.entries(sourceConfig).flatMap(([platform, items]) =>
-        items.map((item) => ({
-          platform,
-          identifier: item.identifier,
-          id: makeSourceKey(platform, item.identifier),
-        }))
-      );
-      return jsonResponse({ sources });
+      if (request.method === "DELETE") {
+        const source = normalizeDataSource(
+          url.searchParams.get("platform"),
+          url.searchParams.get("identifier"),
+        );
+        if (!source) {
+          return jsonResponse(
+            { message: "Invalid platform or source URL" },
+            400,
+          );
+        }
+        const sourceConfig = await getDataSources();
+        const exists = (sourceConfig[source.platform] ?? []).some(
+          (item) => item.identifier === source.identifier,
+        );
+        if (!exists) {
+          return jsonResponse({ message: "Data source not found" }, 404);
+        }
+        await deleteDataSourcePreference(source);
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({ message: "Method Not Allowed" }, 405);
     }
     if (url.pathname === "/api/data-source-rules") {
       if (request.method === "GET") {
@@ -1481,10 +1567,15 @@ const startUiServer = () => {
         }
         const key = makeSourceKey(platform, identifier);
         const ui = await readUiConfigFile();
-        const rulesBySource = (ui.sourceRules && typeof ui.sourceRules === "object")
-          ? ui.sourceRules as Record<string, unknown>
-          : {};
-        return jsonResponse({ platform, identifier, rules: rulesBySource[key] ?? null });
+        const rulesBySource =
+          (ui.sourceRules && typeof ui.sourceRules === "object")
+            ? ui.sourceRules as Record<string, unknown>
+            : {};
+        return jsonResponse({
+          platform,
+          identifier,
+          rules: rulesBySource[key] ?? null,
+        });
       }
       if (request.method === "PUT") {
         const body = await readJsonBody(request);
@@ -1500,9 +1591,10 @@ const startUiServer = () => {
         const key = makeSourceKey(platform, identifier);
         const ui = await readUiConfigFile();
         const next: UiConfigFile = { ...ui };
-        const rulesBySource = (next.sourceRules && typeof next.sourceRules === "object")
-          ? next.sourceRules as Record<string, unknown>
-          : {};
+        const rulesBySource =
+          (next.sourceRules && typeof next.sourceRules === "object")
+            ? next.sourceRules as Record<string, unknown>
+            : {};
         rulesBySource[key] = rules;
         next.sourceRules = rulesBySource;
         await writeUiConfigFile(next);
@@ -1521,7 +1613,10 @@ const startUiServer = () => {
           return jsonResponse({ message: "Invalid request body" }, 400);
         }
         const ui = await readUiConfigFile();
-        await writeUiConfigFile({ ...ui, workflowSettings: body as Record<string, unknown> });
+        await writeUiConfigFile({
+          ...ui,
+          workflowSettings: body as Record<string, unknown>,
+        });
         return jsonResponse({ ok: true });
       }
       return jsonResponse({ message: "Method Not Allowed" }, 405);
@@ -1577,10 +1672,9 @@ const startUiServer = () => {
       const outputDir = join(Deno.cwd(), "output");
       await Deno.mkdir(outputDir, { recursive: true });
       const now = new Date();
-      const fileName =
-        `preview-${workflowType}-${templateType}-${pad(now.getHours())}${
-          pad(now.getMinutes())
-        }${pad(now.getSeconds())}.html`;
+      const fileName = `preview-${workflowType}-${templateType}-${
+        pad(now.getHours())
+      }${pad(now.getMinutes())}${pad(now.getSeconds())}.html`;
       const outputPath = join(outputDir, fileName);
       await Deno.writeTextFile(outputPath, html);
       return jsonResponse({ ok: true, fileName, outputPath });
@@ -1616,6 +1710,5 @@ async function bootstrap() {
 if (Deno.env.get("DISABLE_UI_SERVER") !== "true") {
   startUiServer();
 }
-
 
 bootstrap().catch(console.error);

@@ -32,11 +32,20 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family:
+          "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
-          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          radial-gradient(
+            circle at 20% 20%,
+            rgba(246, 200, 89, 0.2),
+            transparent 45%
+          ),
+          radial-gradient(
+          circle at 80% 10%,
+          rgba(110, 231, 183, 0.18),
+          transparent 40%
+        ),
           linear-gradient(180deg, var(--bg), var(--bg-deep));
         min-height: 100vh;
       }
@@ -248,6 +257,12 @@
         padding: 8px 10px;
         color: var(--text);
         font-size: 13px;
+      }
+
+      /* 原生下拉菜单通常使用白色背景，选项文字必须保持深色以确保可读。 */
+      select option {
+        color: #1f2937;
+        background-color: #ffffff;
       }
 
       .toggle {
@@ -823,14 +838,28 @@
           TrendPublish
         </div>
         <nav class="nav">
-          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
-          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
-          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
-          <a class="nav-item active" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
-          <a class="nav-item" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
-          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
-          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
-          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+          <a class="nav-item" href="prototype.html"><span>概览</span><span
+              class="nav-badge"
+            >6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span
+              class="nav-badge"
+            >4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span
+              class="nav-badge"
+            >8</span></a>
+          <a class="nav-item active" href="workflows.html"><span
+            >工作流</span><span class="nav-badge">3</span></a>
+          <a class="nav-item" href="publish.html"><span>发布中心</span><span
+              class="nav-badge"
+            >2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span
+              class="nav-badge"
+            >14</span></a>
+          <a class="nav-item" href="templates.html#library"><span
+            >模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span
+              class="nav-badge"
+            >1</span></a>
         </nav>
         <div class="sidebar-card">
           <h4>工作流状态</h4>
@@ -842,8 +871,16 @@
           <div class="search">搜索工作流或节点</div>
           <div class="top-actions">
             <div class="pill">已启用 2</div>
-            <button class="btn-secondary" id="save-workflow-settings" type="button">保存配置</button>
-            <button class="run-btn" id="run-workflow" type="button">运行工作流</button>
+            <button
+              class="btn-secondary"
+              id="save-workflow-settings"
+              type="button"
+            >
+              保存配置
+            </button>
+            <button class="run-btn" id="run-workflow" type="button">
+              运行工作流
+            </button>
           </div>
         </div>
         <div class="config-panel">
@@ -867,20 +904,42 @@
                 <option value="twitter">Twitter</option>
                 <option value="twitter-cookie">Twitter Cookie</option>
                 <option value="x-search">X 关键词搜索（浏览器采集）</option>
+                <option value="rss">RSS / Atom 订阅</option>
+                <option value="reddit">Reddit 子版块</option>
+                <option value="bilibili">B站</option>
+                <option value="zhihu">知乎</option>
               </select>
             </label>
             <label class="field">
               入选数量
-              <input id="workflow-max" type="number" min="1" max="50" placeholder="默认 10">
+              <input
+                id="workflow-max"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="默认 10"
+              >
             </label>
             <label class="field" id="workflow-keywords-field" hidden>
               搜索关键词
-              <input id="workflow-keywords" type="text" placeholder='多个用逗号分隔，如：GEO优化, "AI coding agent"'>
-              <small class="field-hint">仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索（约 1~2 分钟）。需 Chrome 已登录 X 且本机代理在线。</small>
+              <input
+                id="workflow-keywords"
+                type="text"
+                placeholder='多个用逗号分隔，如：GEO优化, "AI coding agent"'
+              >
+              <small class="field-hint"
+              >仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索（约 1~2
+                分钟）。需 Chrome 已登录 X 且本机代理在线。</small>
             </label>
             <label class="field">
               HelloGitHub 数量
-              <input id="workflow-max-items" type="number" min="1" max="30" placeholder="默认 10">
+              <input
+                id="workflow-max-items"
+                type="number"
+                min="1"
+                max="30"
+                placeholder="默认 10"
+              >
             </label>
             <label class="field">
               发布方式
@@ -888,7 +947,8 @@
                 <option value="draft">只存本地草稿</option>
                 <option value="immediate">立即发布到公众号</option>
               </select>
-              <small class="field-hint" id="workflow-publish-hint">只存本地草稿，不上传微信。</small>
+              <small class="field-hint" id="workflow-publish-hint"
+              >只存本地草稿，不上传微信。</small>
             </label>
           </div>
         </div>
@@ -900,7 +960,9 @@
             </div>
             <div class="flow-row">
               <div class="flow-node">采集</div>
-              <div class="flow-desc" id="flow-desc-source">请选择工作流类型</div>
+              <div class="flow-desc" id="flow-desc-source">
+                请选择工作流类型
+              </div>
             </div>
             <div class="flow-row">
               <div class="flow-node">打分</div>
@@ -908,11 +970,15 @@
             </div>
             <div class="flow-row">
               <div class="flow-node">生成</div>
-              <div class="flow-desc" id="flow-desc-render">请选择工作流类型</div>
+              <div class="flow-desc" id="flow-desc-render">
+                请选择工作流类型
+              </div>
             </div>
             <div class="flow-row">
               <div class="flow-node">发布</div>
-              <div class="flow-desc" id="flow-desc-publish">请选择工作流类型</div>
+              <div class="flow-desc" id="flow-desc-publish">
+                请选择工作流类型
+              </div>
             </div>
           </div>
           <div class="panel config">
@@ -922,18 +988,42 @@
             </div>
             <div class="config-row">
               <strong>默认入选数量</strong>
-              <input id="core-article-max" type="number" min="1" max="50" placeholder="例如 20">
+              <input
+                id="core-article-max"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="例如 20"
+              >
             </div>
             <div class="config-row">
               <strong>评分权重</strong>
-              <div style="display:flex; gap:10px;">
-                <input id="core-heat" type="number" min="0" max="1" step="0.1" placeholder="热度 0.3">
-                <input id="core-quality" type="number" min="0" max="1" step="0.1" placeholder="质量 0.7">
+              <div style="display: flex; gap: 10px">
+                <input
+                  id="core-heat"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  placeholder="热度 0.3"
+                >
+                <input
+                  id="core-quality"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  placeholder="质量 0.7"
+                >
               </div>
             </div>
             <div class="config-row">
               <strong>模板绑定</strong>
-              <input id="core-templates" type="text" placeholder="例如 modern.ejs, tech.ejs">
+              <input
+                id="core-templates"
+                type="text"
+                placeholder="例如 modern.ejs, tech.ejs"
+              >
             </div>
             <div class="config-row">
               <strong>输出格式</strong>
@@ -987,14 +1077,20 @@
                 <div id="job-duration-text">-</div>
               </div>
             </div>
-            <div class="job-kv" style="margin-top:12px;">
+            <div class="job-kv" style="margin-top: 12px">
               <strong>信息</strong>
               <div id="job-message-text">-</div>
             </div>
-            <div class="job-actions" style="margin-top:12px;">
-              <button class="ghost-btn" id="job-stop" type="button">停止轮询</button>
-              <button class="ghost-btn" id="job-refresh" type="button">刷新一次</button>
-              <button class="ghost-btn" id="job-copy" type="button">复制 JobId</button>
+            <div class="job-actions" style="margin-top: 12px">
+              <button class="ghost-btn" id="job-stop" type="button">
+                停止轮询
+              </button>
+              <button class="ghost-btn" id="job-refresh" type="button">
+                刷新一次
+              </button>
+              <button class="ghost-btn" id="job-copy" type="button">
+                复制 JobId
+              </button>
             </div>
           </div>
           <div class="panel job-history">
@@ -1010,16 +1106,25 @@
     <div class="toast" id="toast"></div>
     <script src="./js/ui-toast.js"></script>
     <div class="job-detail-mask hidden" id="job-detail-mask">
-      <aside class="job-detail" id="job-detail" role="dialog" aria-modal="true"
-             aria-labelledby="job-detail-heading">
+      <aside
+        class="job-detail"
+        id="job-detail"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="job-detail-heading"
+      >
         <div class="job-detail-head">
           <div>
             <h3 id="job-detail-heading">运行详情</h3>
             <div class="job-detail-sub" id="job-detail-sub">-</div>
           </div>
           <div class="job-detail-head-actions">
-            <button class="ghost-btn" id="job-detail-refresh" type="button">刷新</button>
-            <button class="ghost-btn" id="job-detail-close" type="button">关闭</button>
+            <button class="ghost-btn" id="job-detail-refresh" type="button">
+              刷新
+            </button>
+            <button class="ghost-btn" id="job-detail-close" type="button">
+              关闭
+            </button>
           </div>
         </div>
         <div class="job-detail-body" id="job-detail-body"></div>
@@ -1039,24 +1144,40 @@
         : "http://localhost:8787";
 
       const runButton = document.getElementById("run-workflow");
-      const saveButton = document.getElementById("save-workflow-settings");
+      const saveButton = document.getElementById(
+        "save-workflow-settings",
+      );
       const jobStatusPill = document.getElementById("job-status-pill");
       const jobStatusText = document.getElementById("job-status-text");
       const jobTypeText = document.getElementById("job-type-text");
       const jobIdText = document.getElementById("job-id-text");
-      const jobDurationText = document.getElementById("job-duration-text");
-      const jobMessageText = document.getElementById("job-message-text");
+      const jobDurationText = document.getElementById(
+        "job-duration-text",
+      );
+      const jobMessageText = document.getElementById(
+        "job-message-text",
+      );
       const jobStopButton = document.getElementById("job-stop");
       const jobRefreshButton = document.getElementById("job-refresh");
       const jobCopyButton = document.getElementById("job-copy");
       const jobListEl = document.getElementById("job-list");
-      const jobHistoryCountEl = document.getElementById("job-history-count");
+      const jobHistoryCountEl = document.getElementById(
+        "job-history-count",
+      );
       const saveState = document.getElementById("workflow-save-state");
-      const flowTypePill = document.getElementById("workflow-type-pill");
-      const flowDescSource = document.getElementById("flow-desc-source");
+      const flowTypePill = document.getElementById(
+        "workflow-type-pill",
+      );
+      const flowDescSource = document.getElementById(
+        "flow-desc-source",
+      );
       const flowDescScore = document.getElementById("flow-desc-score");
-      const flowDescRender = document.getElementById("flow-desc-render");
-      const flowDescPublish = document.getElementById("flow-desc-publish");
+      const flowDescRender = document.getElementById(
+        "flow-desc-render",
+      );
+      const flowDescPublish = document.getElementById(
+        "flow-desc-publish",
+      );
 
       const STORAGE_RECENT_JOBS = "tp.workflows.recentJobs";
       const STORAGE_ACTIVE_JOB = "tp.workflows.activeJobId";
@@ -1105,7 +1226,9 @@
 
       const shortId = (id) => {
         if (!id) return "-";
-        return id.length > 12 ? `${id.slice(0, 6)}...${id.slice(-4)}` : id;
+        return id.length > 12
+          ? `${id.slice(0, 6)}...${id.slice(-4)}`
+          : id;
       };
 
       const statusLabel = (status) => {
@@ -1130,7 +1253,8 @@
         window.localStorage.setItem(STORAGE_ACTIVE_JOB, jobId);
       };
 
-      const getActiveJobId = () => window.localStorage.getItem(STORAGE_ACTIVE_JOB) || "";
+      const getActiveJobId = () =>
+        window.localStorage.getItem(STORAGE_ACTIVE_JOB) || "";
 
       let pollTimer = null;
       let pollingJobId = "";
@@ -1140,7 +1264,9 @@
         const status = job?.status || "unknown";
         if (jobStatusPill) {
           jobStatusPill.textContent = statusLabel(status);
-          jobStatusPill.className = `pill status-pill ${statusClass(status)}`;
+          jobStatusPill.className = `pill status-pill ${
+            statusClass(status)
+          }`;
         }
         if (jobStatusText) {
           jobStatusText.textContent = statusLabel(status);
@@ -1156,7 +1282,9 @@
           const finishedAt = job?.finishedAt || 0;
           const base = startedAt ? startedAt : 0;
           const end = status === "running" ? Date.now() : finishedAt;
-          jobDurationText.textContent = base ? formatDuration(end - base) : "-";
+          jobDurationText.textContent = base
+            ? formatDuration(end - base)
+            : "-";
         }
         if (jobMessageText) {
           if (status === "error") {
@@ -1177,8 +1305,10 @@
         const next = {
           jobId: patch.jobId,
           type: patch.type || (index >= 0 ? jobs[index].type : ""),
-          status: patch.status || (index >= 0 ? jobs[index].status : "unknown"),
-          startedAt: patch.startedAt || (index >= 0 ? jobs[index].startedAt : Date.now()),
+          status: patch.status ||
+            (index >= 0 ? jobs[index].status : "unknown"),
+          startedAt: patch.startedAt ||
+            (index >= 0 ? jobs[index].startedAt : Date.now()),
           finishedAt: typeof patch.finishedAt === "number"
             ? patch.finishedAt
             : (index >= 0 ? jobs[index].finishedAt : null),
@@ -1205,7 +1335,8 @@
         if (!jobs.length) {
           const empty = document.createElement("div");
           empty.className = "job-empty";
-          empty.textContent = "暂无运行记录，点击“运行工作流”后会在此显示状态";
+          empty.textContent =
+            "暂无运行记录，点击“运行工作流”后会在此显示状态";
           jobListEl.appendChild(empty);
           return;
         }
@@ -1221,11 +1352,15 @@
             ? "-"
             : item.finishedAt
             ? formatDuration(item.finishedAt - item.startedAt)
-            : (item.status === "running" ? formatDuration(Date.now() - item.startedAt) : "-");
+            : (item.status === "running"
+              ? formatDuration(Date.now() - item.startedAt)
+              : "-");
           row.innerHTML = `
             <div>${formatTime(item.startedAt)}</div>
             <strong>${item.type || "-"}</strong>
-            <div class="status-pill ${statusClass(item.status)}">${statusLabel(item.status)}</div>
+            <div class="status-pill ${statusClass(item.status)}">${
+            statusLabel(item.status)
+          }</div>
             <div>${durationText}</div>
             <div>${shortId(item.jobId)}</div>
             <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -1239,7 +1374,9 @@
 
       const fetchJobStatus = async (jobId) => {
         const resp = await fetch(
-          `${apiBase}/api/workflows/status?jobId=${encodeURIComponent(jobId)}`,
+          `${apiBase}/api/workflows/status?jobId=${
+            encodeURIComponent(jobId)
+          }`,
         );
         if (!resp.ok) {
           const err = new Error("status failed");
@@ -1287,12 +1424,16 @@
               stopPolling();
             }
           } catch (error) {
-            const status = error && typeof error === "object" ? error.status : null;
+            const status = error && typeof error === "object"
+              ? error.status
+              : null;
             renderJobPanel({
               id: pollingJobId,
               type: "",
               status: "unknown",
-              message: status === 404 ? "任务不存在（可能服务已重启）" : "状态查询失败",
+              message: status === 404
+                ? "任务不存在（可能服务已重启）"
+                : "状态查询失败",
             });
             upsertRecentJob({ jobId: pollingJobId, status: "unknown" });
             renderRecentJobs();
@@ -1308,23 +1449,30 @@
       const jobDetailMask = document.getElementById("job-detail-mask");
       const jobDetailSub = document.getElementById("job-detail-sub");
       const jobDetailBody = document.getElementById("job-detail-body");
-      const jobDetailClose = document.getElementById("job-detail-close");
-      const jobDetailRefresh = document.getElementById("job-detail-refresh");
+      const jobDetailClose = document.getElementById(
+        "job-detail-close",
+      );
+      const jobDetailRefresh = document.getElementById(
+        "job-detail-refresh",
+      );
 
       let jobDetailTimer = null;
       let jobDetailJobId = "";
 
       const escapeHtml = (value) =>
-        String(value ?? "").replace(/[&<>"']/g, (ch) =>
-          ch === "&"
-            ? "&amp;"
-            : ch === "<"
-            ? "&lt;"
-            : ch === ">"
-            ? "&gt;"
-            : ch === '"'
-            ? "&quot;"
-            : "&#39;");
+        String(value ?? "").replace(
+          /[&<>"']/g,
+          (ch) =>
+            ch === "&"
+              ? "&amp;"
+              : ch === "<"
+              ? "&lt;"
+              : ch === ">"
+              ? "&gt;"
+              : ch === '"'
+              ? "&quot;"
+              : "&#39;",
+        );
 
       const formatClock = (value) => {
         if (!value) return "-";
@@ -1355,22 +1503,33 @@
         }
         const items = steps.map((step) => {
           const start = step.startedAt || 0;
-          const end = step.finishedAt || (step.status === "running" ? Date.now() : 0);
-          const duration = start && end ? formatDuration(end - start) : "-";
+          const end = step.finishedAt ||
+            (step.status === "running" ? Date.now() : 0);
+          const duration = start && end
+            ? formatDuration(end - start)
+            : "-";
           const attempts = Number(step.attempts) > 0
-            ? `<span class="job-step-attempts">重试 ${Number(step.attempts)} 次（共 ${Number(step.attempts) + 1} 次）</span>`
+            ? `<span class="job-step-attempts">重试 ${
+              Number(step.attempts)
+            } 次（共 ${Number(step.attempts) + 1} 次）</span>`
             : "";
           const error = step.error
-            ? `<div class="job-step-error">${escapeHtml(step.error)}</div>`
+            ? `<div class="job-step-error">${
+              escapeHtml(step.error)
+            }</div>`
             : "";
           const result = step.resultPreview
-            ? `<div class="job-step-result">结果：${escapeHtml(step.resultPreview)}</div>`
+            ? `<div class="job-step-result">结果：${
+              escapeHtml(step.resultPreview)
+            }</div>`
             : "";
           return `<li class="job-step ${step.status}">
             <div class="job-step-head">
               <span class="job-step-dot"></span>
               <strong>${escapeHtml(step.name)}</strong>
-              <span class="job-step-status">${stepStatusLabel(step.status)}</span>
+              <span class="job-step-status">${
+            stepStatusLabel(step.status)
+          }</span>
               <span class="job-step-time">${duration}</span>
               ${attempts}
             </div>
@@ -1378,7 +1537,10 @@
             ${result}
           </li>`;
         }).join("");
-        return detailSection("步骤", `<ol class="job-step-list">${items}</ol>`);
+        return detailSection(
+          "步骤",
+          `<ol class="job-step-list">${items}</ol>`,
+        );
       };
 
       const renderJobDetail = (job) => {
@@ -1387,28 +1549,49 @@
         const startedAt = job && job.startedAt ? job.startedAt : 0;
         const finishedAt = job && job.finishedAt ? job.finishedAt : 0;
         const duration = startedAt
-          ? formatDuration((status === "running" ? Date.now() : finishedAt) - startedAt)
+          ? formatDuration(
+            (status === "running" ? Date.now() : finishedAt) -
+              startedAt,
+          )
           : "-";
 
         if (jobDetailSub) {
           jobDetailSub.innerHTML = `
-            <span class="status-pill ${statusClass(status)}">${statusLabel(status)}</span>
+            <span class="status-pill ${statusClass(status)}">${
+            statusLabel(status)
+          }</span>
             <span>${escapeHtml((job && job.type) || "-")}</span>
             <code>${escapeHtml((job && job.id) || "-")}</code>
             <span>耗时 ${duration}</span>`;
         }
 
-        const payload = job && job.payload && typeof job.payload === "object" ? job.payload : null;
+        const payload =
+          job && job.payload && typeof job.payload === "object"
+            ? job.payload
+            : null;
         const payloadHtml = payload && Object.keys(payload).length
-          ? `<pre class="job-detail-pre">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`
+          ? `<pre class="job-detail-pre">${
+            escapeHtml(JSON.stringify(payload, null, 2))
+          }</pre>`
           : '<p class="job-detail-empty">没有参数记录</p>';
 
-        const errorMessage = (job && job.error && job.error.message) || (job && job.message) || "";
-        const errorStack = job && job.error && job.error.stack ? job.error.stack : "";
+        const errorMessage = (job && job.error && job.error.message) ||
+          (job && job.message) || "";
+        const errorStack = job && job.error && job.error.stack
+          ? job.error.stack
+          : "";
         const errorHtml = errorMessage
           ? `<div class="job-detail-error">
-              <div class="job-detail-error-msg">${escapeHtml(errorMessage)}</div>
-              ${errorStack ? `<pre class="job-detail-pre">${escapeHtml(errorStack)}</pre>` : ""}
+              <div class="job-detail-error-msg">${
+            escapeHtml(errorMessage)
+          }</div>
+              ${
+            errorStack
+              ? `<pre class="job-detail-pre">${
+                escapeHtml(errorStack)
+              }</pre>`
+              : ""
+          }
             </div>`
           : '<p class="job-detail-empty">没有错误信息</p>';
 
@@ -1417,14 +1600,20 @@
           .map((line) => `[${formatClock(line.at)}] ${line.text}`)
           .join("\n");
         const logsHtml = logs.length
-          ? `<pre class="job-detail-pre job-detail-logs" id="job-detail-logs">${escapeHtml(logsText)}</pre>`
+          ? `<pre class="job-detail-pre job-detail-logs" id="job-detail-logs">${
+            escapeHtml(logsText)
+          }</pre>`
           : '<p class="job-detail-empty">没有日志记录（早于本功能的运行不含日志）</p>';
 
-        const drafts = Array.isArray(job && job.drafts) ? job.drafts : [];
+        const drafts = Array.isArray(job && job.drafts)
+          ? job.drafts
+          : [];
         const draftsHtml = drafts.length
           ? `<ul class="job-detail-drafts">${
             drafts.map((draft) =>
-              `<li><strong>${escapeHtml(draft.title || "(无标题)")}</strong><span>${
+              `<li><strong>${
+                escapeHtml(draft.title || "(无标题)")
+              }</strong><span>${
                 escapeHtml(draft.status || "")
               }</span><span>${formatTime(draft.createdAt)}</span></li>`
             ).join("")
@@ -1433,10 +1622,18 @@
           : '<p class="job-detail-empty">本次运行没有产出草稿</p>';
 
         const kv = `<div class="job-detail-kv">
-          <div><span>开始时间</span>${escapeHtml(formatTime(startedAt))}</div>
-          <div><span>结束时间</span>${escapeHtml(finishedAt ? formatTime(finishedAt) : "-")}</div>
-          <div><span>JobId</span><code>${escapeHtml((job && job.id) || "-")}</code></div>
-          <div><span>工作流</span>${escapeHtml((job && job.type) || "-")}</div>
+          <div><span>开始时间</span>${
+          escapeHtml(formatTime(startedAt))
+        }</div>
+          <div><span>结束时间</span>${
+          escapeHtml(finishedAt ? formatTime(finishedAt) : "-")
+        }</div>
+          <div><span>JobId</span><code>${
+          escapeHtml((job && job.id) || "-")
+        }</code></div>
+          <div><span>工作流</span>${
+          escapeHtml((job && job.type) || "-")
+        }</div>
         </div>`;
 
         jobDetailBody.innerHTML = [
@@ -1456,14 +1653,18 @@
 
       const renderJobDetailError = (jobId, error) => {
         if (!jobDetailBody) return;
-        const status = error && typeof error === "object" ? error.status : null;
+        const status = error && typeof error === "object"
+          ? error.status
+          : null;
         const message = status === 404
           ? "任务记录不存在（服务已重启，且这条记录没有落盘）"
           : "读取运行详情失败";
         // 头部也要跟着换成当前这条，否则会留着上一条任务的信息（误导）
         if (jobDetailSub) {
           jobDetailSub.innerHTML = `
-            <span class="status-pill ${statusClass("error")}">不可用</span>
+            <span class="status-pill ${
+            statusClass("error")
+          }">不可用</span>
             <code>${escapeHtml(jobId)}</code>`;
         }
         jobDetailBody.innerHTML = detailSection(
@@ -1515,15 +1716,21 @@
         // 先把头部改成本条，避免残留上一条任务的状态/JobId
         if (jobDetailSub) {
           jobDetailSub.innerHTML = `
-            <span class="status-pill ${statusClass("unknown")}">加载中</span>
+            <span class="status-pill ${
+            statusClass("unknown")
+          }">加载中</span>
             <code>${escapeHtml(jobId)}</code>`;
         }
         if (jobDetailBody) {
-          jobDetailBody.innerHTML = '<p class="job-detail-empty">加载中…</p>';
+          jobDetailBody.innerHTML =
+            '<p class="job-detail-empty">加载中…</p>';
         }
         await loadJobDetail(jobId);
         // 还在跑的任务，抽屉开着时继续刷新
-        if (jobDetailJobId === jobId && !jobDetailMask.classList.contains("hidden")) {
+        if (
+          jobDetailJobId === jobId &&
+          !jobDetailMask.classList.contains("hidden")
+        ) {
           stopJobDetailPolling();
           jobDetailTimer = window.setInterval(() => {
             if (jobDetailJobId) loadJobDetail(jobDetailJobId);
@@ -1539,8 +1746,10 @@
         if (event.target === jobDetailMask) closeJobDetail();
       });
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && jobDetailMask &&
-            !jobDetailMask.classList.contains("hidden")) {
+        if (
+          event.key === "Escape" && jobDetailMask &&
+          !jobDetailMask.classList.contains("hidden")
+        ) {
           closeJobDetail();
         }
       });
@@ -1553,9 +1762,12 @@
 
       const refreshStaleRunningJobs = async () => {
         if (staleRefreshRunning) return;
-        const activelyPolled = pollingJobId && !pollingPaused ? pollingJobId : "";
+        const activelyPolled = pollingJobId && !pollingPaused
+          ? pollingJobId
+          : "";
         const targets = readRecentJobs().filter((item) =>
-          item && item.jobId && item.status === "running" && item.jobId !== activelyPolled
+          item && item.jobId && item.status === "running" &&
+          item.jobId !== activelyPolled
         );
         if (!targets.length) return;
         staleRefreshRunning = true;
@@ -1572,7 +1784,9 @@
                 message: job.message,
               });
             } catch (error) {
-              const status = error && typeof error === "object" ? error.status : null;
+              const status = error && typeof error === "object"
+                ? error.status
+                : null;
               if (status === 404) {
                 upsertRecentJob({
                   jobId: item.jobId,
@@ -1623,7 +1837,8 @@
       };
 
       const getEl = (id) => document.getElementById(id);
-      const hasTypeSelected = () => Boolean(getEl("workflow-type").value);
+      const hasTypeSelected = () =>
+        Boolean(getEl("workflow-type").value);
 
       if (jobListEl) {
         jobListEl.addEventListener("click", async (event) => {
@@ -1681,7 +1896,9 @@
         }
         pollingPaused = !pollingPaused;
         if (jobStopButton) {
-          jobStopButton.textContent = pollingPaused ? "继续轮询" : "停止轮询";
+          jobStopButton.textContent = pollingPaused
+            ? "继续轮询"
+            : "停止轮询";
         }
       });
 
@@ -1719,8 +1936,11 @@
       };
 
       const syncFlowPreview = (type) => {
-        if (!flowTypePill || !flowDescSource || !flowDescScore || !flowDescRender ||
-          !flowDescPublish) {
+        if (
+          !flowTypePill || !flowDescSource || !flowDescScore ||
+          !flowDescRender ||
+          !flowDescPublish
+        ) {
           return;
         }
         if (!type) {
@@ -1733,7 +1953,8 @@
         }
         if (type === "weixin-article") {
           flowTypePill.textContent = "文章工作流";
-          flowDescSource.textContent = "来源：Firecrawl + Twitter + Twitter Cookie";
+          flowDescSource.textContent =
+            "来源：Firecrawl + Twitter + Twitter Cookie";
           flowDescScore.textContent = "模型评分 + 热度加权";
           flowDescRender.textContent = "模板：Modern / Tech";
           flowDescPublish.textContent = "渠道：微信草稿箱";
@@ -1751,8 +1972,10 @@
           flowTypePill.textContent = "深度文";
           flowDescSource.textContent =
             "来源：180 天窗口 → X 短推文过滤 → 候选补料抓取 → 一手资格对账";
-          flowDescScore.textContent = "主题包聚类 + 爆款评分（选 1 个主题）";
-          flowDescRender.textContent = "skill：write-ai-wechat-article（观察者评论位）";
+          flowDescScore.textContent =
+            "主题包聚类 + 爆款评分（选 1 个主题）";
+          flowDescRender.textContent =
+            "skill：write-ai-wechat-article（观察者评论位）";
           flowDescPublish.textContent = "默认只出稿归档，不自动发布";
           return;
         }
@@ -1769,11 +1992,16 @@
         const disableInputs = isWorkflowInputsDisabled(hasType);
         const typeValue = hasType ? getEl("workflow-type").value : "";
         if (saveState) {
-          saveState.textContent = getWorkflowSaveStateText(hasType, dirty);
+          saveState.textContent = getWorkflowSaveStateText(
+            hasType,
+            dirty,
+          );
         }
         if (saveButton) {
           saveButton.disabled = disableActions;
-          saveButton.textContent = disableActions ? "请选择工作流类型" : "保存配置";
+          saveButton.textContent = disableActions
+            ? "请选择工作流类型"
+            : "保存配置";
         }
         if (runButton) {
           runButton.disabled = disableActions || dirty;
@@ -1796,19 +2024,29 @@
 
       const fillUI = (settings) => {
         getEl("workflow-type").value = settings.run.workflowType || "";
-        getEl("workflow-source").value = settings.run.sourceType || "all";
+        getEl("workflow-source").value = settings.run.sourceType ||
+          "all";
         getEl("workflow-max").value = settings.run.maxArticles ?? "";
         getEl("workflow-max-items").value = settings.run.maxItems ?? "";
-        getEl("workflow-publish-mode").value = settings.run.publishMode || "draft";
+        getEl("workflow-publish-mode").value =
+          settings.run.publishMode || "draft";
         syncPublishModeHint();
-        getEl("workflow-keywords").value = (settings.run.includeKeywords || []).join(", ");
+        getEl("workflow-keywords").value =
+          (settings.run.includeKeywords || []).join(", ");
 
-        getEl("core-article-max").value = settings.core.article.maxArticles ?? 20;
-        getEl("core-heat").value = settings.core.article.heatWeight ?? 0.3;
-        getEl("core-quality").value = settings.core.article.qualityWeight ?? 0.7;
-        getEl("core-templates").value = (settings.core.article.templates || []).join(", ");
-        getEl("core-output").value = settings.core.article.output || "html-weixin";
-        getEl("core-publish").value = String(Boolean(settings.core.article.publish));
+        getEl("core-article-max").value =
+          settings.core.article.maxArticles ?? 20;
+        getEl("core-heat").value = settings.core.article.heatWeight ??
+          0.3;
+        getEl("core-quality").value =
+          settings.core.article.qualityWeight ?? 0.7;
+        getEl("core-templates").value =
+          (settings.core.article.templates || []).join(", ");
+        getEl("core-output").value = settings.core.article.output ||
+          "html-weixin";
+        getEl("core-publish").value = String(
+          Boolean(settings.core.article.publish),
+        );
 
         markDirty(false);
         syncWorkflowState();
@@ -1821,14 +2059,17 @@
         const runSource = getEl("workflow-source").value || "all";
         const runMax = getEl("workflow-max").value;
         const runMaxItems = getEl("workflow-max-items").value;
-        const runPublishMode = getEl("workflow-publish-mode").value || "draft";
+        const runPublishMode = getEl("workflow-publish-mode").value ||
+          "draft";
 
         next.run.workflowType = runType;
         next.run.sourceType = runSource;
         next.run.maxArticles = runMax ? Number(runMax) : null;
         next.run.maxItems = runMaxItems ? Number(runMaxItems) : null;
         next.run.publishMode = runPublishMode;
-        next.run.includeKeywords = String(getEl("workflow-keywords").value || "")
+        next.run.includeKeywords = String(
+          getEl("workflow-keywords").value || "",
+        )
           .split(/[,，\n]/)
           .map((x) => x.trim())
           .filter(Boolean);
@@ -1841,8 +2082,12 @@
         const corePublish = getEl("core-publish").value;
 
         next.core.article.maxArticles = coreMax ? Number(coreMax) : 20;
-        next.core.article.heatWeight = coreHeat ? Number(coreHeat) : 0.3;
-        next.core.article.qualityWeight = coreQuality ? Number(coreQuality) : 0.7;
+        next.core.article.heatWeight = coreHeat
+          ? Number(coreHeat)
+          : 0.3;
+        next.core.article.qualityWeight = coreQuality
+          ? Number(coreQuality)
+          : 0.7;
         next.core.article.templates = String(coreTemplates || "")
           .split(",")
           .map((x) => x.trim())
@@ -1871,7 +2116,8 @@
         const keywordsField = getEl("workflow-keywords-field");
         const sourceEl = getEl("workflow-source");
         if (keywordsField) {
-          keywordsField.hidden = !supportsSource || sourceEl.value !== "x-search";
+          keywordsField.hidden = !supportsSource ||
+            sourceEl.value !== "x-search";
         }
       };
 
@@ -1885,9 +2131,10 @@
       const syncPublishModeHint = () => {
         const hint = getEl("workflow-publish-hint");
         if (!hint) return;
-        hint.textContent = getEl("workflow-publish-mode").value === "immediate"
-          ? "会真实调微信接口，提交后进公众号后台的草稿箱（本项不代为群发）；失败时本地草稿仍在。"
-          : "只存本地草稿，不上传微信。";
+        hint.textContent =
+          getEl("workflow-publish-mode").value === "immediate"
+            ? "会真实调微信接口，提交后进公众号后台的草稿箱（本项不代为群发）；失败时本地草稿仍在。"
+            : "只存本地草稿，不上传微信。";
       };
 
       const attachDirtyListeners = () => {
@@ -1924,8 +2171,10 @@
       const getEffectivePayload = (settings) => {
         const type = settings.run.workflowType;
         if (type === "weixin-article") {
-          const sourceType = settings.run.sourceType || settings.core.article.sourceType;
-          const maxArticles = settings.run.maxArticles ?? settings.core.article.maxArticles;
+          const sourceType = settings.run.sourceType ||
+            settings.core.article.sourceType;
+          const maxArticles = settings.run.maxArticles ??
+            settings.core.article.maxArticles;
           const publishMode = settings.run.publishMode || "draft";
           // publish 必须由 publishMode 推导，不再跟 core.article.publish 走。
           // 旧写法 `publishMode==="draft" ? false : core.article.publish` 配上默认 false 的
@@ -1949,16 +2198,23 @@
           };
         }
         if (type === "weixin-hellogithub") {
-          const maxItems = settings.run.maxItems ?? settings.core.hellogithub.maxItems;
+          const maxItems = settings.run.maxItems ??
+            settings.core.hellogithub.maxItems;
           const publishMode = settings.run.publishMode || "draft";
           return {
             type,
-            payload: { maxItems, publish: publishMode === "immediate", publishMode },
+            payload: {
+              maxItems,
+              publish: publishMode === "immediate",
+              publishMode,
+            },
           };
         }
         if (type === "weixin-deep-article") {
-          const sourceType = settings.run.sourceType || settings.core.article.sourceType;
-          const maxMaterials = settings.run.maxArticles ?? settings.core.article.maxArticles;
+          const sourceType = settings.run.sourceType ||
+            settings.core.article.sourceType;
+          const maxMaterials = settings.run.maxArticles ??
+            settings.core.article.maxArticles;
           const publishMode = settings.run.publishMode || "draft";
           // 深度文默认只出稿：即使选了「立即发布」，工作流还会再校验量表与隐私，
           // 不过关就只归档并报原因，不会硬发。
@@ -1976,7 +2232,10 @@
         const publishMode = settings.run.publishMode || "draft";
         return {
           type,
-          payload: { publish: publishMode === "immediate", publishMode },
+          payload: {
+            publish: publishMode === "immediate",
+            publishMode,
+          },
         };
       };
 
@@ -1993,12 +2252,18 @@
             core: {
               ...base.core,
               ...(saved.core || {}),
-              article: { ...base.core.article, ...((saved.core || {}).article || {}) },
+              article: {
+                ...base.core.article,
+                ...((saved.core || {}).article || {}),
+              },
               hellogithub: {
                 ...base.core.hellogithub,
                 ...((saved.core || {}).hellogithub || {}),
               },
-              aibench: { ...base.core.aibench, ...((saved.core || {}).aibench || {}) },
+              aibench: {
+                ...base.core.aibench,
+                ...((saved.core || {}).aibench || {}),
+              },
             },
             run: { ...base.run, ...(saved.run || {}) },
           };
@@ -2017,11 +2282,14 @@
           saveButton.classList.add("loading");
           try {
             const next = collectUI();
-            const resp = await fetch(`${apiBase}/api/workflow-settings`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(next),
-            });
+            const resp = await fetch(
+              `${apiBase}/api/workflow-settings`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(next),
+              },
+            );
             if (!resp.ok) throw new Error("save failed");
             currentSettings = next;
             markDirty(false);
@@ -2053,7 +2321,9 @@
                 "• 会真实提交到公众号（微信侧不支持撤销）\n" +
                 "• 不论选哪种方式，都会先存一份本地草稿，发布失败不会丢内容\n" +
                 `• 工作流类型：${getEl("workflow-type").value}\n` +
-                `• 来源类型：${getEl("workflow-source").value || "all"}\n\n` +
+                `• 来源类型：${
+                  getEl("workflow-source").value || "all"
+                }\n\n` +
                 "只想存本地草稿，选「只存本地草稿」。",
             );
             if (!ok) {
@@ -2066,18 +2336,26 @@
           try {
             const next = collectUI();
             const { type, payload } = getEffectivePayload(next);
-            const response = await fetch(`${apiBase}/api/workflows/run`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ type, payload }),
-            });
+            const response = await fetch(
+              `${apiBase}/api/workflows/run`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type, payload }),
+              },
+            );
             if (!response.ok) {
               throw new Error("workflow failed");
             }
             const data = await response.json();
             const jobId = data && data.jobId ? String(data.jobId) : "";
             if (jobId) {
-              upsertRecentJob({ jobId, type, status: "running", startedAt: Date.now() });
+              upsertRecentJob({
+                jobId,
+                type,
+                status: "running",
+                startedAt: Date.now(),
+              });
               renderRecentJobs();
               startPolling(jobId);
             }

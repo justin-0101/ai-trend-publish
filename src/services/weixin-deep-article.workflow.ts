@@ -109,7 +109,11 @@ export interface WeixinDeepWorkflowParams {
     | "firecrawl"
     | "twitter"
     | "twitter-cookie"
-    | "x-search";
+    | "x-search"
+    | "rss"
+    | "reddit"
+    | "bilibili"
+    | "zhihu";
   includeKeywords?: string[];
   excludeKeywords?: string[];
   maxMaterials?: number;

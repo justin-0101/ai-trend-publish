@@ -11,6 +11,10 @@ import {
   TwitterScraper,
 } from "../modules/scrapers/twitter.scraper.ts";
 import { XSearchScraper } from "../modules/scrapers/x-search.scraper.ts";
+import { RssScraper } from "../modules/scrapers/rss.scraper.ts";
+import { RedditScraper } from "../modules/scrapers/reddit.scraper.ts";
+import { BilibiliScraper } from "../modules/scrapers/bilibili.scraper.ts";
+import { ZhihuScraper } from "../modules/scrapers/zhihu.scraper.ts";
 import { dedupeScrapedContents, DroppedAt } from "./content-dedup.ts";
 import {
   DEFAULT_MAX_AGE_DAYS,
@@ -45,7 +49,11 @@ export type DeepCollectSourceType =
   | "firecrawl"
   | "twitter"
   | "twitter-cookie"
-  | "x-search";
+  | "x-search"
+  | "rss"
+  | "reddit"
+  | "bilibili"
+  | "zhihu";
 
 export interface DeepCollectParams {
   sourceType?: DeepCollectSourceType;
@@ -130,6 +138,10 @@ export const buildDeepArticleScrapers = (): Map<string, ContentScraper> => {
   map.set("twitter-cookie", new TwitterCookieScraper());
   map.set("twitter-frontend", new TwitterFrontendScraper());
   map.set("x-search", new XSearchScraper());
+  map.set("rss", new RssScraper());
+  map.set("reddit", new RedditScraper());
+  map.set("bilibili", new BilibiliScraper());
+  map.set("zhihu", new ZhihuScraper());
   return map;
 };
 
@@ -202,8 +214,25 @@ export const collectDeepArticleMaterials = async (
     ? includeKeywords.map((query) => ({ identifier: query }))
     : [];
 
+  // 新增的四个预置类型。
+  // 进 all 的：rss / bilibili / zhihu —— 都是一次纯 HTTP 请求，秒级返回，失败也不拖垮流程。
+  // 不进 all 的：reddit —— Reddit 对同一 IP 严格限速（连续请求必 429），
+  // 混进定时任务的「全量跑」只会多出一个随机失败的源；与 x-search 同一约定：要它就显式选。
+  const selectedRss = sourceType === "all" || sourceType === "rss"
+    ? (configs.rss ?? [])
+    : [];
+  const selectedBilibili = sourceType === "all" || sourceType === "bilibili"
+    ? (configs.bilibili ?? [])
+    : [];
+  const selectedZhihu = sourceType === "all" || sourceType === "zhihu"
+    ? (configs.zhihu ?? [])
+    : [];
+  const selectedReddit = sourceType === "reddit" ? (configs.reddit ?? []) : [];
+
   const totalSources = selectedFirecrawl.length + selectedTwitter.length +
-    selectedTwitterCookie.length + selectedXSearch.length;
+    selectedTwitterCookie.length + selectedXSearch.length +
+    selectedRss.length + selectedReddit.length + selectedBilibili.length +
+    selectedZhihu.length;
   if (totalSources === 0) {
     throw new WorkflowTerminateError(
       sourceType === "x-search"
@@ -296,6 +325,42 @@ export const collectDeepArticleMaterials = async (
       );
     }
   }
+  for (const source of selectedReddit) {
+    await runScraper(
+      "Reddit",
+      "Reddit",
+      source.identifier,
+      scrapers.get("reddit"),
+    );
+  }
+
+  for (const source of selectedRss) {
+    await runScraper(
+      "RSS",
+      "RSS",
+      source.identifier,
+      scrapers.get("rss"),
+    );
+  }
+
+  for (const source of selectedBilibili) {
+    await runScraper(
+      "B站",
+      "B站",
+      source.identifier,
+      scrapers.get("bilibili"),
+    );
+  }
+
+  for (const source of selectedZhihu) {
+    await runScraper(
+      "知乎",
+      "知乎",
+      source.identifier,
+      scrapers.get("zhihu"),
+    );
+  }
+
   for (const source of selectedXSearch) {
     // x-search 不吞错：用户显式选了这个源，失败必须把可操作原因原样抛出来
     const scraper = scrapers.get("x-search");

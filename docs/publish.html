@@ -32,11 +32,20 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family:
+          "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 20% 20%, rgba(246, 200, 89, 0.2), transparent 45%),
-          radial-gradient(circle at 80% 10%, rgba(110, 231, 183, 0.18), transparent 40%),
+          radial-gradient(
+            circle at 20% 20%,
+            rgba(246, 200, 89, 0.2),
+            transparent 45%
+          ),
+          radial-gradient(
+          circle at 80% 10%,
+          rgba(110, 231, 183, 0.18),
+          transparent 40%
+        ),
           linear-gradient(180deg, var(--bg), var(--bg-deep));
         min-height: 100vh;
       }
@@ -620,14 +629,28 @@
           TrendPublish
         </div>
         <nav class="nav">
-          <a class="nav-item" href="prototype.html"><span>概览</span><span class="nav-badge">6</span></a>
-          <a class="nav-item" href="sources.html"><span>采集源</span><span class="nav-badge">4</span></a>
-          <a class="nav-item" href="templates.html"><span>选择模板</span><span class="nav-badge">8</span></a>
-          <a class="nav-item" href="workflows.html"><span>工作流</span><span class="nav-badge">3</span></a>
-          <a class="nav-item active" href="publish.html"><span>发布中心</span><span class="nav-badge">2</span></a>
-          <a class="nav-item" href="history.html"><span>历史记录</span><span class="nav-badge">14</span></a>
-          <a class="nav-item" href="templates.html#library"><span>模板库</span><span class="nav-badge">8</span></a>
-          <a class="nav-item" href="settings.html"><span>系统设置</span><span class="nav-badge">1</span></a>
+          <a class="nav-item" href="prototype.html"><span>概览</span><span
+              class="nav-badge"
+            >6</span></a>
+          <a class="nav-item" href="sources.html"><span>采集源</span><span
+              class="nav-badge"
+            >4</span></a>
+          <a class="nav-item" href="templates.html"><span>选择模板</span><span
+              class="nav-badge"
+            >8</span></a>
+          <a class="nav-item" href="workflows.html"><span>工作流</span><span
+              class="nav-badge"
+            >3</span></a>
+          <a class="nav-item active" href="publish.html"><span
+            >发布中心</span><span class="nav-badge">2</span></a>
+          <a class="nav-item" href="history.html"><span>历史记录</span><span
+              class="nav-badge"
+            >14</span></a>
+          <a class="nav-item" href="templates.html#library"><span
+            >模板库</span><span class="nav-badge">8</span></a>
+          <a class="nav-item" href="settings.html"><span>系统设置</span><span
+              class="nav-badge"
+            >1</span></a>
         </nav>
         <div class="sidebar-card">
           <h4>发布统计</h4>
@@ -639,7 +662,9 @@
           <div class="search">搜索发布记录</div>
           <div class="top-actions">
             <div class="pill">草稿箱</div>
-            <button class="run-btn" id="run-publish" type="button">生成草稿</button>
+            <button class="run-btn" id="run-publish" type="button">
+              生成草稿
+            </button>
           </div>
         </div>
         <div class="ip-warning" id="ip-warning" hidden>
@@ -647,13 +672,18 @@
           <div class="ip-warning-body">
             <strong>当前 IP 不在公众号白名单 —— 此时发布必定失败</strong>
             <p>
-              微信接口拒绝了本机请求（errcode 40164）。公众号所有需要 access_token 的接口
-              （包括创建草稿）都会校验调用方 IP，必须先把下面这个 IP 加入白名单。
+              微信接口拒绝了本机请求（errcode 40164）。公众号所有需要
+              access_token 的接口 （包括创建草稿）都会校验调用方
+              IP，必须先把下面这个 IP 加入白名单。
             </p>
             <div class="ip-warning-row">
               <code id="ip-value">—</code>
-              <button class="ghost-btn" id="ip-copy" type="button">复制 IP</button>
-              <button class="ghost-btn" id="ip-recheck" type="button">重新检测</button>
+              <button class="ghost-btn" id="ip-copy" type="button">
+                复制 IP
+              </button>
+              <button class="ghost-btn" id="ip-recheck" type="button">
+                重新检测
+              </button>
               <a
                 class="ghost-btn"
                 href="https://mp.weixin.qq.com/"
@@ -662,8 +692,8 @@
               >打开公众号后台</a>
             </div>
             <p>
-              路径：设置与开发 → 基本配置 → IP 白名单。
-              注意：家庭宽带的出口 IP 会变，变了需要重新添加。
+              路径：设置与开发 → 基本配置 → IP 白名单。 注意：家庭宽带的出口 IP
+              会变，变了需要重新添加。
             </p>
           </div>
         </div>
@@ -698,16 +728,32 @@
                 <option value="twitter">Twitter</option>
                 <option value="twitter-cookie">Twitter Cookie</option>
                 <option value="x-search">X 关键词搜索（浏览器采集）</option>
+                <option value="rss">RSS / Atom 订阅</option>
+                <option value="reddit">Reddit 子版块</option>
+                <option value="bilibili">B站</option>
+                <option value="zhihu">知乎</option>
               </select>
             </label>
             <label class="field">
               最大入选
-              <input id="publish-max" type="number" min="1" max="50" placeholder="默认 10">
+              <input
+                id="publish-max"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="默认 10"
+              >
             </label>
             <label class="field" id="publish-keywords-field" hidden>
               搜索关键词（多个用逗号分隔）
-              <input id="publish-keywords" type="text" placeholder='如：GEO优化, "generative engine optimization"'>
-              <small class="field-hint">仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索。采集需 Chrome 已登录 X 且代理在线。</small>
+              <input
+                id="publish-keywords"
+                type="text"
+                placeholder='如：GEO优化, "generative engine optimization"'
+              >
+              <small class="field-hint"
+              >仅「X 关键词搜索」用：每个关键词 = 一次 X 全网搜索。采集需 Chrome
+                已登录 X 且代理在线。</small>
             </label>
             <label class="field">
               发布方式
@@ -715,7 +761,8 @@
                 <option value="draft">保存到草稿箱</option>
                 <option value="immediate">立即发布到公众号</option>
               </select>
-              <small class="field-hint" id="publish-mode-hint">生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。</small>
+              <small class="field-hint" id="publish-mode-hint"
+              >生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。</small>
             </label>
           </div>
         </div>
@@ -742,7 +789,9 @@
             <h3>草稿编辑</h3>
             <span class="pill" id="draft-editor-status">未选择</span>
           </div>
-          <button class="modal-close" id="draft-close" type="button">关闭</button>
+          <button class="modal-close" id="draft-close" type="button">
+            关闭
+          </button>
         </div>
         <label class="field">
           标题
@@ -750,12 +799,19 @@
         </label>
         <label class="field">
           内容
-          <div id="draft-html" class="draft-editor" contenteditable="true"></div>
+          <div id="draft-html" class="draft-editor" contenteditable="true">
+          </div>
         </label>
         <div class="editor-actions">
-          <button class="ghost-btn" id="draft-save" type="button">保存修改</button>
-          <button class="run-btn" id="draft-publish" type="button">立即发布</button>
-          <button class="ghost-btn" id="draft-delete" type="button">删除草稿</button>
+          <button class="ghost-btn" id="draft-save" type="button">
+            保存修改
+          </button>
+          <button class="run-btn" id="draft-publish" type="button">
+            立即发布
+          </button>
+          <button class="ghost-btn" id="draft-delete" type="button">
+            删除草稿
+          </button>
         </div>
       </div>
     </div>
@@ -771,13 +827,23 @@
        * 点一下就是一次真实发布，不存在“先看一眼”的中间态。
        */
       const PUBLISH_MODE_LABELS = {
-        draft: { button: "生成草稿", hint: "生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。" },
-        immediate: { button: "立即发布", hint: "⚠️ 会真实推送到微信公众号，公开可见；微信侧不支持撤销。" },
+        draft: {
+          button: "生成草稿",
+          hint:
+            "生成后进下方「草稿箱」，可预览、编辑，再逐篇决定是否发布。",
+        },
+        immediate: {
+          button: "立即发布",
+          hint:
+            "⚠️ 会真实推送到微信公众号，公开可见；微信侧不支持撤销。",
+        },
       };
 
       const publishModeSelect = document.getElementById("publish-mode");
       const getPublishMode = () =>
-        publishModeSelect && publishModeSelect.value === "immediate" ? "immediate" : "draft";
+        publishModeSelect && publishModeSelect.value === "immediate"
+          ? "immediate"
+          : "draft";
 
       /** 按钮文案 + 提示随发布方式联动，避免「按钮写立即发布、实际不发」这种谎报 */
       const syncPublishMode = () => {
@@ -809,7 +875,9 @@
                 "• 会真实推送到公众号，公开可见\n" +
                 "• 微信侧不支持撤销\n" +
                 `• 来源类型：${source ? source.value : "all"}\n` +
-                `• 最大入选：${max && max.value ? max.value : "默认"}\n\n` +
+                `• 最大入选：${
+                  max && max.value ? max.value : "默认"
+                }\n\n` +
                 "只想先生成草稿，选「保存到草稿箱」。",
             );
             if (!ok) {
@@ -827,9 +895,13 @@
                 type: "weixin-article",
                 payload: {
                   sourceType: source ? source.value : "all",
-                  maxArticles: max && max.value ? Number(max.value) : undefined,
+                  maxArticles: max && max.value
+                    ? Number(max.value)
+                    : undefined,
                   includeKeywords: keywords && keywords.value.trim()
-                    ? keywords.value.split(/[,，\n]/).map((s) => s.trim()).filter(Boolean)
+                    ? keywords.value.split(/[,，\n]/).map((s) =>
+                      s.trim()
+                    ).filter(Boolean)
                     : undefined,
                   publishMode: mode,
                   // publish 必须由 publishMode 推导，不单独设开关：
@@ -843,7 +915,9 @@
               throw new Error("workflow failed");
             }
             showToast(
-              mode === "immediate" ? "发布请求已触发" : "草稿生成请求已触发",
+              mode === "immediate"
+                ? "发布请求已触发"
+                : "草稿生成请求已触发",
               "success",
             );
           } catch {
@@ -858,9 +932,13 @@
       const draftCountEl = document.getElementById("draft-count");
       const draftTitleInput = document.getElementById("draft-title");
       const draftHtmlInput = document.getElementById("draft-html");
-      const draftEditorStatus = document.getElementById("draft-editor-status");
+      const draftEditorStatus = document.getElementById(
+        "draft-editor-status",
+      );
       const draftSaveButton = document.getElementById("draft-save");
-      const draftPublishButton = document.getElementById("draft-publish");
+      const draftPublishButton = document.getElementById(
+        "draft-publish",
+      );
       const draftDeleteButton = document.getElementById("draft-delete");
       const draftModal = document.getElementById("draft-modal");
       const draftCloseButton = document.getElementById("draft-close");
@@ -878,7 +956,8 @@
         if (!drafts || drafts.length === 0) {
           const empty = document.createElement("div");
           empty.className = "draft-empty";
-          empty.textContent = "暂无草稿，请先在工作流中选择保存到草稿箱";
+          empty.textContent =
+            "暂无草稿，请先在工作流中选择保存到草稿箱";
           draftListEl.appendChild(empty);
           if (draftCountEl) {
             draftCountEl.textContent = "0";
@@ -891,18 +970,30 @@
         drafts.forEach((draft) => {
           const row = document.createElement("div");
           row.className = "draft-row";
-          const statusClass = draft.status === "published" ? "ok" : "warn";
-          const statusText = draft.status === "published" ? "已发布" : "草稿";
+          const statusClass = draft.status === "published"
+            ? "ok"
+            : "warn";
+          const statusText = draft.status === "published"
+            ? "已发布"
+            : "草稿";
           // 标题来自流水线（素材 → LLM → 标题），不能直接拼进 innerHTML：
           // 一个带标签的标题就能在这页注入标记，而这页能调发布接口。
           row.innerHTML = `
             <strong>${escapeHtml(draft.title || "未命名草稿")}</strong>
-            <span>${formatTime(draft.updatedAt || draft.createdAt)}</span>
+            <span>${
+            formatTime(draft.updatedAt || draft.createdAt)
+          }</span>
             <div class="status ${statusClass}">${statusText}</div>
             <div class="draft-actions">
-              <button class="ghost-btn" data-action="edit" data-id="${encodeURIComponent(draft.id)}">编辑</button>
-              <button class="run-btn" data-action="publish" data-id="${encodeURIComponent(draft.id)}">发布</button>
-              <button class="ghost-btn" data-action="delete" data-id="${encodeURIComponent(draft.id)}">删除</button>
+              <button class="ghost-btn" data-action="edit" data-id="${
+            encodeURIComponent(draft.id)
+          }">编辑</button>
+              <button class="run-btn" data-action="publish" data-id="${
+            encodeURIComponent(draft.id)
+          }">发布</button>
+              <button class="ghost-btn" data-action="delete" data-id="${
+            encodeURIComponent(draft.id)
+          }">删除</button>
             </div>
           `;
           draftListEl.appendChild(row);
@@ -910,13 +1001,14 @@
       };
 
       const escapeHtml = (value) =>
-        String(value ?? "").replace(/[&<>"']/g, (ch) => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        })[ch]);
+        String(value ?? "").replace(/[&<>"']/g, (ch) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[ch]);
 
       /**
        * 草稿 HTML 的最小清理。
@@ -935,7 +1027,10 @@
           .replace(/<object[\s\S]*?<\/object>/gi, "")
           .replace(/<embed[\s\S]*?>/gi, "")
           .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-          .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*/gi, "$1=$2#");
+          .replace(
+            /(href|src)\s*=\s*("|')\s*javascript:[^"']*/gi,
+            "$1=$2#",
+          );
 
       const loadDrafts = async () => {
         try {
@@ -957,7 +1052,9 @@
           draftTitleInput.value = draft?.title || "";
         }
         if (draftHtmlInput) {
-          draftHtmlInput.innerHTML = sanitizeDraftHtml(draft?.html || "");
+          draftHtmlInput.innerHTML = sanitizeDraftHtml(
+            draft?.html || "",
+          );
         }
         if (draftEditorStatus) {
           draftEditorStatus.textContent = draft
@@ -988,7 +1085,9 @@
           showToast("请先选择草稿", "error");
           return;
         }
-        const title = draftTitleInput ? draftTitleInput.value.trim() : "";
+        const title = draftTitleInput
+          ? draftTitleInput.value.trim()
+          : "";
         const html = draftHtmlInput ? draftHtmlInput.innerHTML : "";
         if (!title || !html.trim()) {
           showToast("标题或内容不能为空", "error");
@@ -996,11 +1095,14 @@
         }
         draftSaveButton?.classList.add("loading");
         try {
-          const response = await fetch(`/api/drafts/${currentDraftId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title, html }),
-          });
+          const response = await fetch(
+            `/api/drafts/${currentDraftId}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title, html }),
+            },
+          );
           if (!response.ok) {
             throw new Error("save failed");
           }
@@ -1040,9 +1142,12 @@
         }
         draftPublishButton?.classList.add("loading");
         try {
-          const response = await fetch(`/api/drafts/${targetId}/publish`, {
-            method: "POST",
-          });
+          const response = await fetch(
+            `/api/drafts/${targetId}/publish`,
+            {
+              method: "POST",
+            },
+          );
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -1055,7 +1160,10 @@
           await loadDrafts();
 
           if (!succeeded) {
-            showToast(`发布失败：${result?.error || "未知错误"}`, "error");
+            showToast(
+              `发布失败：${result?.error || "未知错误"}`,
+              "error",
+            );
             return;
           }
 
@@ -1066,7 +1174,9 @@
           }, PUBLISH_MODAL_CLOSE_DELAY);
         } catch (error) {
           showToast(
-            `草稿发布失败：${error instanceof Error ? error.message : String(error)}`,
+            `草稿发布失败：${
+              error instanceof Error ? error.message : String(error)
+            }`,
             "error",
           );
         } finally {
@@ -1081,9 +1191,12 @@
         }
         draftDeleteButton?.classList.add("loading");
         try {
-          const response = await fetch(`/api/drafts/${currentDraftId}`, {
-            method: "DELETE",
-          });
+          const response = await fetch(
+            `/api/drafts/${currentDraftId}`,
+            {
+              method: "DELETE",
+            },
+          );
           if (!response.ok) {
             throw new Error("delete failed");
           }
@@ -1124,7 +1237,10 @@
       }
 
       draftSaveButton?.addEventListener("click", saveDraft);
-      draftPublishButton?.addEventListener("click", () => publishDraft());
+      draftPublishButton?.addEventListener(
+        "click",
+        () => publishDraft(),
+      );
       draftDeleteButton?.addEventListener("click", deleteDraft);
       draftCloseButton?.addEventListener("click", () => {
         draftModal?.classList.remove("show");
@@ -1140,7 +1256,9 @@
       const ipValue = document.getElementById("ip-value");
       const ipCopyButton = document.getElementById("ip-copy");
       const ipRecheckButton = document.getElementById("ip-recheck");
-      const weixinStatusText = document.getElementById("weixin-status-text");
+      const weixinStatusText = document.getElementById(
+        "weixin-status-text",
+      );
       const platformPill = document.getElementById("platform-pill");
 
       const setPlatformPill = (text) => {
@@ -1184,14 +1302,17 @@
 
           if (data.reason === "missing-credentials") {
             if (weixinStatusText) {
-              weixinStatusText.textContent = "未配置 WEIXIN_APP_ID / APP_SECRET";
+              weixinStatusText.textContent =
+                "未配置 WEIXIN_APP_ID / APP_SECRET";
             }
             setPlatformPill("微信未配置");
             return;
           }
 
           if (weixinStatusText) {
-            weixinStatusText.textContent = `微信接口异常：${data.errmsg || "未知错误"}`;
+            weixinStatusText.textContent = `微信接口异常：${
+              data.errmsg || "未知错误"
+            }`;
           }
           setPlatformPill("微信异常");
         } catch {
@@ -1229,7 +1350,9 @@
       };
       const sourceSelect = document.getElementById("publish-source");
       const maxInput = document.getElementById("publish-max");
-      const keywordsField = document.getElementById("publish-keywords-field");
+      const keywordsField = document.getElementById(
+        "publish-keywords-field",
+      );
       const keywordsInput = document.getElementById("publish-keywords");
 
       // 关键词框只在选「X 关键词搜索」时出现：别的来源里这个框没有对应语义，
@@ -1243,13 +1366,19 @@
       if (keywordsInput) {
         keywordsInput.value = applyStored("tp.publish.keywords", "");
         keywordsInput.addEventListener("input", () => {
-          window.localStorage.setItem("tp.publish.keywords", keywordsInput.value);
+          window.localStorage.setItem(
+            "tp.publish.keywords",
+            keywordsInput.value,
+          );
         });
       }
       if (sourceSelect) {
         sourceSelect.value = applyStored("tp.publish.source", "all");
         sourceSelect.addEventListener("change", () => {
-          window.localStorage.setItem("tp.publish.source", sourceSelect.value);
+          window.localStorage.setItem(
+            "tp.publish.source",
+            sourceSelect.value,
+          );
           syncKeywordsVisibility();
         });
       }
@@ -1264,9 +1393,15 @@
       // 之前有一个默认勾选的「强制发布」复选框，已删除——它在这个页面里是空转的
       // （工作流只看 publish/publishMode），却会让人以为“不勾就安全”。
       if (publishModeSelect) {
-        publishModeSelect.value = applyStored("tp.publish.mode", "draft");
+        publishModeSelect.value = applyStored(
+          "tp.publish.mode",
+          "draft",
+        );
         publishModeSelect.addEventListener("change", () => {
-          window.localStorage.setItem("tp.publish.mode", publishModeSelect.value);
+          window.localStorage.setItem(
+            "tp.publish.mode",
+            publishModeSelect.value,
+          );
         });
       }
       syncPublishMode();

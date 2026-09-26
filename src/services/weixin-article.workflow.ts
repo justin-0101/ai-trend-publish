@@ -11,8 +11,16 @@ import { BarkNotifier } from "../modules/notify/bark.notify.ts";
 import { WeixinPublisher } from "../modules/publishers/weixin.publisher.ts";
 import { WeixinTemplate } from "../modules/render/interfaces/article.type.ts";
 import { FireCrawlScraper } from "../modules/scrapers/fireCrawl.scraper.ts";
-import { TwitterCookieScraper, TwitterFrontendScraper, TwitterScraper } from "../modules/scrapers/twitter.scraper.ts";
+import {
+  TwitterCookieScraper,
+  TwitterFrontendScraper,
+  TwitterScraper,
+} from "../modules/scrapers/twitter.scraper.ts";
 import { XSearchScraper } from "../modules/scrapers/x-search.scraper.ts";
+import { RssScraper } from "../modules/scrapers/rss.scraper.ts";
+import { RedditScraper } from "../modules/scrapers/reddit.scraper.ts";
+import { BilibiliScraper } from "../modules/scrapers/bilibili.scraper.ts";
+import { ZhihuScraper } from "../modules/scrapers/zhihu.scraper.ts";
 import { AISummarizer } from "../modules/summarizer/ai.summarizer.ts";
 import { ImageGeneratorFactory } from "../providers/image-gen/image-generator-factory.ts";
 import { WeixinArticleTemplateRenderer } from "../modules/render/article.renderer.ts";
@@ -126,7 +134,9 @@ export const prioritizeByKeywordRelevance = (
 
 interface WeixinWorkflowEnv {
   name: string;
-  draftWriter?: (draft: { title: string; html: string; workflowType: string }) => Promise<unknown>;
+  draftWriter?: (
+    draft: { title: string; html: string; workflowType: string },
+  ) => Promise<unknown>;
   draftStatusWriter?: (
     id: string,
     status: "draft" | "published",
@@ -142,7 +152,11 @@ interface WeixinWorkflowParams {
     | "firecrawl"
     | "twitter"
     | "twitter-cookie"
-    | "x-search";
+    | "x-search"
+    | "rss"
+    | "reddit"
+    | "bilibili"
+    | "zhihu";
   maxArticles?: number;
   forcePublish?: boolean;
   publish?: boolean;
@@ -173,6 +187,10 @@ export class WeixinArticleWorkflow
     this.scraper.set("twitter-cookie", new TwitterCookieScraper());
     this.scraper.set("twitter-frontend", new TwitterFrontendScraper());
     this.scraper.set("x-search", new XSearchScraper());
+    this.scraper.set("rss", new RssScraper());
+    this.scraper.set("reddit", new RedditScraper());
+    this.scraper.set("bilibili", new BilibiliScraper());
+    this.scraper.set("zhihu", new ZhihuScraper());
     this.summarizer = new AISummarizer();
     this.publisher = new WeixinPublisher();
     this.notifier = new BarkNotifier();
@@ -218,9 +236,10 @@ export class WeixinArticleWorkflow
           .map((x) => x.trim()).filter(Boolean)
         : [];
 
-      const selectedFirecrawl = sourceType === "all" || sourceType === "firecrawl"
-        ? sourceConfigs.firecrawl
-        : [];
+      const selectedFirecrawl =
+        sourceType === "all" || sourceType === "firecrawl"
+          ? sourceConfigs.firecrawl
+          : [];
       const selectedTwitter = sourceType === "all" || sourceType === "twitter"
         ? sourceConfigs.twitter
         : [];
@@ -234,8 +253,25 @@ export class WeixinArticleWorkflow
       const selectedXSearch = sourceType === "x-search"
         ? includeKeywords.map((query) => ({ identifier: query }))
         : [];
+
+      // 新增的四个预置类型，与 deep-article 采集链路保持完全一致的选源约定：
+      // rss / bilibili / zhihu 进 all（都是秒级纯 HTTP）；reddit 不进 all（同 IP 严格限速，必 429）。
+      const selectedRss = sourceType === "all" || sourceType === "rss"
+        ? sourceConfigs.rss || []
+        : [];
+      const selectedBilibili = sourceType === "all" || sourceType === "bilibili"
+        ? sourceConfigs.bilibili || []
+        : [];
+      const selectedZhihu = sourceType === "all" || sourceType === "zhihu"
+        ? sourceConfigs.zhihu || []
+        : [];
+      const selectedReddit = sourceType === "reddit"
+        ? sourceConfigs.reddit || []
+        : [];
       const totalSources = selectedFirecrawl.length + selectedTwitter.length +
-        selectedTwitterCookie.length + selectedXSearch.length;
+        selectedTwitterCookie.length + selectedXSearch.length +
+        selectedRss.length + selectedReddit.length + selectedBilibili.length +
+        selectedZhihu.length;
 
       if (totalSources === 0) {
         throw new WorkflowTerminateError(
@@ -301,6 +337,81 @@ export class WeixinArticleWorkflow
         if (!xSearchScraper) {
           throw new WorkflowTerminateError("XSearchScraper not found");
         }
+        const rssScraper = this.scraper.get("rss");
+        if (!rssScraper) {
+          throw new WorkflowTerminateError("RssScraper not found");
+        }
+        const redditScraper = this.scraper.get("reddit");
+        if (!redditScraper) {
+          throw new WorkflowTerminateError("RedditScraper not found");
+        }
+        const bilibiliScraper = this.scraper.get("bilibili");
+        if (!bilibiliScraper) {
+          throw new WorkflowTerminateError("BilibiliScraper not found");
+        }
+        const zhihuScraper = this.scraper.get("zhihu");
+        if (!zhihuScraper) {
+          throw new WorkflowTerminateError("ZhihuScraper not found");
+        }
+
+        // 新增四个类型的抓取。都走 scrapeSource（吞错 + 通知 + 计数），
+        // 因为它们都有明确的错误信息（feed 不是 feed、限速、分区写错），
+        // 单源失败不应该让整条文章流程终止。
+        for (const source of selectedRss) {
+          const sourceContents = await this.scrapeSource(
+            "RSS",
+            source,
+            rssScraper,
+          );
+          contents.push(...sourceContents);
+          totalArticles += sourceContents.length;
+          await scrapeProgress.render(++scrapeCompleted, {
+            title:
+              `抓取 RSS: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+          });
+        }
+
+        for (const source of selectedReddit) {
+          const sourceContents = await this.scrapeSource(
+            "Reddit",
+            source,
+            redditScraper,
+          );
+          contents.push(...sourceContents);
+          totalArticles += sourceContents.length;
+          await scrapeProgress.render(++scrapeCompleted, {
+            title:
+              `抓取 Reddit: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+          });
+        }
+
+        for (const source of selectedBilibili) {
+          const sourceContents = await this.scrapeSource(
+            "B站",
+            source,
+            bilibiliScraper,
+          );
+          contents.push(...sourceContents);
+          totalArticles += sourceContents.length;
+          await scrapeProgress.render(++scrapeCompleted, {
+            title:
+              `抓取 B站: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+          });
+        }
+
+        for (const source of selectedZhihu) {
+          const sourceContents = await this.scrapeSource(
+            "知乎",
+            source,
+            zhihuScraper,
+          );
+          contents.push(...sourceContents);
+          totalArticles += sourceContents.length;
+          await scrapeProgress.render(++scrapeCompleted, {
+            title:
+              `抓取 知乎: ${source.identifier} | 已获取文章: ${totalArticles}篇`,
+          });
+        }
 
         for (const source of selectedTwitter) {
           // twitterapi.io 欠费(402)或没配 key 时，不能让整条流程直接空手而归：
@@ -345,7 +456,9 @@ export class WeixinArticleWorkflow
         for (const source of selectedXSearch) {
           logger.debug(`[X搜索] 抓取: ${source.identifier}`);
           try {
-            const sourceContents = await xSearchScraper.scrape(source.identifier);
+            const sourceContents = await xSearchScraper.scrape(
+              source.identifier,
+            );
             this.stats.success++;
             contents.push(...sourceContents);
             totalArticles += sourceContents.length;
@@ -396,9 +509,12 @@ export class WeixinArticleWorkflow
       // 会把「搜到了但正文没字面命中」的内容全剔掉，最后报「过滤后无可用内容」。
       // 这正是之前「设了 GEO 却一条都没有」的假故障成因。
       const filteredContents = allContents.filter((content) => {
-        const text = `${content.title ?? ""}\n${content.content ?? ""}`.toLowerCase();
+        const text = `${content.title ?? ""}\n${content.content ?? ""}`
+          .toLowerCase();
         if (excludeKeywords.length > 0) {
-          const hit = excludeKeywords.some((k) => text.includes(k.toLowerCase()));
+          const hit = excludeKeywords.some((k) =>
+            text.includes(k.toLowerCase())
+          );
           if (hit) return false;
         }
         if (content.metadata?.platform === "x-search") return true;
@@ -477,7 +593,9 @@ export class WeixinArticleWorkflow
           );
         } else {
           // 0 合并也要留一行：否则「去重到底跑没跑」在日志里看不出来
-          logger.info(`[去重] 输入 ${ordered.length} → 保留 ${kept.length}（无重复）`);
+          logger.info(
+            `[去重] 输入 ${ordered.length} → 保留 ${kept.length}（无重复）`,
+          );
         }
         logger.info("[内容排序] 内容排序完成");
         return kept;

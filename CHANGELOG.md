@@ -1,13 +1,60 @@
 # 更新日志
 
+## [未发布] - 2026-09-27
+
+### 采集源模块：4 个固定预置采集类型 + 删除（隐藏）
+
+#### 采集源改为固定预置
+
+- 新增 4 个预置源，直接出现在界面采集源列表里供选择
+  （`src/data-sources/getDataSources.ts` 的 `sourceConfigs`）：
+
+  | 类型       | 预置的实际源                            |
+  | ---------- | --------------------------------------- |
+  | `rss`      | `https://www.qbitai.com/feed`（量子位） |
+  | `bilibili` | `popular`（综合热门）                   |
+  | `zhihu`    | `hot`（热榜）                           |
+  | `reddit`   | `r/OpenAI`                              |
+
+- 不再提供「手动添加采集源」：去掉界面弹窗/按钮与 `POST /api/data-sources`
+  （要再加同类型的源，直接改 `sourceConfigs`）。
+- 删除仍保留：`DELETE /api/data-sources` → 写入 `logs/ui-config.json` 的
+  `deletedDataSources` 屏蔽清单（不是删代码里的定义）。想恢复就把该项从
+  `logs/ui-config.json` 的 `deletedDataSources` 删掉。
+- 新增
+  `src/services/data-source-registry.ts`：把删除偏好与静态配置、数据库三者的合并
+  统一收在 `getDataSources()` 一个出口。
+- `docs/sources.html`：新增每行「删除」按钮，顶部「启用中 N」改为真实数量。
+- 顺带修一个老坑：`ENABLE_DB` 取值异常或数据库不可用时，旧代码直接返回静态配置，
+  界面上的删除会**静默失效**；现在记日志后继续套用用户偏好。
+
+#### 4 个新类型的实现范围（按真机实测可用性定的）
+
+| 类型       | 实测可用                                                                     | 实测不可用（已在代码注释里写明不做的原因）                                                       |
+| ---------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `rss`      | 少数派 / 量子位 / InfoQ / Solidot / IT之家 / 极客公园 / 阮一峰 / OpenAI / HN | 36氪、机器之心的 `/feed`、`/rss` 返回 HTML 挑战页 → 明确报错                                     |
+| `reddit`   | `r/X/hot/.rss`（Atom，无需 key）；内置最小请求间隔 + 429 退避重试            | JSON API 403；`old.reddit.com` feed 为空                                                         |
+| `bilibili` | `popular`（综合热门）、`newlist:<rid>`（分区最新）                           | 分区排行返回**陈旧缓存**（2026-09 抓到 2025-03 条目）故不提供；UP 主投稿 HTTP 412（需 WBI 签名） |
+| `zhihu`    | `hot`（热榜，`api.zhihu.com`）、`daily`（日报，`news-at.zhihu.com`）         | `www.zhihu.com/hot` 403、`/api/v3/feed/topstory` 401（均需登录态）                               |
+
+- 选源约定：`rss` / `bilibili` / `zhihu` 进 `all`（秒级纯 HTTP）；`reddit`
+  **不进** `all` （同 IP 严格限速，混进定时任务只会多一个随机失败源），与
+  `x-search` 同一约定。
+- 采集器实现：`src/modules/scrapers/` 下的 `feed-parser.ts`（零依赖 RSS/Atom
+  解析）、`rss.scraper.ts`、`reddit.scraper.ts`、
+  `bilibili.scraper.ts`、`zhihu.scraper.ts`，共用 `fetch-text.ts` 与
+  `text-utils.ts`。
+
 ## [未发布] - 2026-09-26
 
 ### X 搜索优先展开 X Article
 
 - 搜索结果识别 X Article，并在截断与深度文素材限额前优先保留。
 - 搜索卡片未暴露文章链接时，按 `/status/ID` → `/article/ID` 探测。
-- 读取 `twitterArticleRichTextView` / `longformRichTextComponent`，把文章全文回填到素材。
-- 原始 JSON 增加 `isArticle`、`articleFetched`、`articleTitle` 字段，避免把搜索摘要误当全文。
+- 读取 `twitterArticleRichTextView` /
+  `longformRichTextComponent`，把文章全文回填到素材。
+- 原始 JSON 增加 `isArticle`、`articleFetched`、`articleTitle`
+  字段，避免把搜索摘要误当全文。
 
 ### 新增深度文工作流：从时效窗口内素材里选一个主题，按写作 skill 出稿
 
@@ -35,21 +82,21 @@ references）没法直接塞进工作流，因为有三处硬冲突：
 
 #### 改了什么
 
-| 位置                                                                        | 改动                                                                                                                                                                                  |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `references/content-lanes.md`、`SKILL.md`                                   | 四领域 → 五领域；新增 `topic-package.md`（多条素材→主题包→爆款评分）、`privacy-redaction.md`（隐私红线）                                                                              |
-| `references/skill-step-map.json`（新增）                                    | **步骤→reference 映射外置**：工作流按步注入片段，不整包读 2498 行；skill 迭代改 JSON，不动 TS                                                                                         |
-| `modules/deep-article/skill-loader.ts`                                      | 定位 skill 根、读步骤表、按区域抽 markdown 章节、按段落边界截断；每步强制注入隐私与观察者位两条红线                                                                                   |
-| `modules/deep-article/step-runner.ts`                                       | 装配 system 段 → 调 LLM（`response_format: json_object`）→ 宽松解析；`DeepArticleRunnerLike` 结构接口留出测试接缝                                                                     |
-| `services/topic-cluster.ts`                                                 | 主题包聚类 + 爆款评分；**分值代码夹取、总分代码相加、硬淘汰代码执行**；防幻觉剔除不存在的素材 id；发现「整簇素材未被聚类」；单素材主题必须有可抓取的补料入口（素材 URL 或正文内链接），但该入口不自动等于一手来源 |
-| `modules/deep-article/material-date.ts`、`services/deep-article-collect.ts` | 素材统一按 `publishDate` 做 180 天时效过滤；日期缺失保留但单列；`00-素材清单.md` 逐条审计保留、过期与去重结果                                                                         |
-| `modules/deep-article/source-link.ts`                                       | 从真实素材中提取、去重和筛选补料链接；排除 X/微博等社交平台及静态资源，不采信模型编造的 URL                                                                                           |
-| `services/author-context.ts`                                                | 只读加载 `E:\agent_person_txt\` 与档案目录，**先脱敏再注入**，带文件数/字数上限，路径不存在降级不报错；新增**记忆包本地摘要**（见下）                                                 |
-| `services/privacy-guard.ts`、`modules/deep-article/privacy.ts`              | 隐私闸门：代码层模式匹配（需第一人称/关系词锚点，公开机构名不误拦）+ 名单来源接本地推送守卫名单                                                                                       |
-| `modules/deep-article/review-gate.ts`                                       | 量表闸门：总分与关键三项下限，硬门槛失败即停止评分                                                                                                                                    |
+| 位置                                                                                | 改动                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `references/content-lanes.md`、`SKILL.md`                                           | 四领域 → 五领域；新增 `topic-package.md`（多条素材→主题包→爆款评分）、`privacy-redaction.md`（隐私红线）                                                                                                                                                                                                       |
+| `references/skill-step-map.json`（新增）                                            | **步骤→reference 映射外置**：工作流按步注入片段，不整包读 2498 行；skill 迭代改 JSON，不动 TS                                                                                                                                                                                                                  |
+| `modules/deep-article/skill-loader.ts`                                              | 定位 skill 根、读步骤表、按区域抽 markdown 章节、按段落边界截断；每步强制注入隐私与观察者位两条红线                                                                                                                                                                                                            |
+| `modules/deep-article/step-runner.ts`                                               | 装配 system 段 → 调 LLM（`response_format: json_object`）→ 宽松解析；`DeepArticleRunnerLike` 结构接口留出测试接缝                                                                                                                                                                                              |
+| `services/topic-cluster.ts`                                                         | 主题包聚类 + 爆款评分；**分值代码夹取、总分代码相加、硬淘汰代码执行**；防幻觉剔除不存在的素材 id；发现「整簇素材未被聚类」；单素材主题必须有可抓取的补料入口（素材 URL 或正文内链接），但该入口不自动等于一手来源                                                                                              |
+| `modules/deep-article/material-date.ts`、`services/deep-article-collect.ts`         | 素材统一按 `publishDate` 做 180 天时效过滤；日期缺失保留但单列；`00-素材清单.md` 逐条审计保留、过期与去重结果                                                                                                                                                                                                  |
+| `modules/deep-article/source-link.ts`                                               | 从真实素材中提取、去重和筛选补料链接；排除 X/微博等社交平台及静态资源，不采信模型编造的 URL                                                                                                                                                                                                                    |
+| `services/author-context.ts`                                                        | 只读加载 `E:\agent_person_txt\` 与档案目录，**先脱敏再注入**，带文件数/字数上限，路径不存在降级不报错；新增**记忆包本地摘要**（见下）                                                                                                                                                                          |
+| `services/privacy-guard.ts`、`modules/deep-article/privacy.ts`                      | 隐私闸门：代码层模式匹配（需第一人称/关系词锚点，公开机构名不误拦）+ 名单来源接本地推送守卫名单                                                                                                                                                                                                                |
+| `modules/deep-article/review-gate.ts`                                               | 量表闸门：总分与关键三项下限，硬门槛失败即停止评分                                                                                                                                                                                                                                                             |
 | `services/weixin-deep-article.workflow.ts`、`modules/scrapers/fireCrawl.scraper.ts` | 13 个 LLM 步骤 + 17 份编号中间产物落盘 `output/deep-article-*/`；`material-gap` 先用专用 `scrapePage()` 读取最多 3 个候选页，再让模型看原文做来源资格与充分度判断；只有和真实 URL 对账一致、判为一手且可用的补料才进入证据锁定、作者立场、研究包和起草；缺少 `scrapePage` 时失败关闭，不回退“今日新闻列表”提取 |
-| `templates/article/article.deep.ejs`                                        | 单篇长文模板（无序号、带副标题与机器审稿声明）                                                                                                                                        |
-| `controllers/cron.ts`、`src/index.ts`、`docs/workflows.html`                | 注册进定时任务、API 与 Web 控制台（含模板预览）                                                                                                                                       |
+| `templates/article/article.deep.ejs`                                                | 单篇长文模板（无序号、带副标题与机器审稿声明）                                                                                                                                                                                                                                                                 |
+| `controllers/cron.ts`、`src/index.ts`、`docs/workflows.html`                        | 注册进定时任务、API 与 Web 控制台（含模板预览）                                                                                                                                                                                                                                                                |
 
 #### 记忆包：本地摘要后送
 
@@ -172,10 +219,10 @@ skill 的材料门槛。这是缺口，不是调参问题。
 把已落盘的原始 JSON 直接当采集结果续跑（不再碰 X），一路跑到 `material-gap`，
 暴露了两个此前没被覆盖的缺陷。
 
-| 问题 | 根因 | 修法 |
-| --- | --- | --- |
-| **8 个主题包全部硬淘汰**，理由是“没有可抓取的补料入口” | x.com 的 DOM `innerText` 会按显示宽度把 URL 拆成多行（`https://` + `github.com/x/y` + `ntent-writer`），链接提取器把它当成无效链接 | `source-link.ts` 新增 `unwrapLineWrappedUrls`：只拼接由纯 URL 字符构成的续行，遇中文/空行/列表标题立即停止（避免把下一条正文吞进地址）；3 条回归测试 |
-| **模型把“今天”猜成 2026-05-07**，据此把 05-08 之后发布的合法素材判成“未来数据 → 不可用”，直接压低一手来源数 | 输入里没有任何时间基准，模型只能凭记忆推 | `topic-cluster.buildMaterialPayload` 与 `renderTopicBrief` 都注入代码生成的 `【当前日期】`，并为每条素材加“距当前 N 天”；skill 步骤表同步写明“时效判断只能以此为准，不得凭记忆推测今天是几号” |
+| 问题                                                                                                        | 根因                                                                                                                               | 修法                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **8 个主题包全部硬淘汰**，理由是“没有可抓取的补料入口”                                                      | x.com 的 DOM `innerText` 会按显示宽度把 URL 拆成多行（`https://` + `github.com/x/y` + `ntent-writer`），链接提取器把它当成无效链接 | `source-link.ts` 新增 `unwrapLineWrappedUrls`：只拼接由纯 URL 字符构成的续行，遇中文/空行/列表标题立即停止（避免把下一条正文吞进地址）；3 条回归测试                                          |
+| **模型把“今天”猜成 2026-05-07**，据此把 05-08 之后发布的合法素材判成“未来数据 → 不可用”，直接压低一手来源数 | 输入里没有任何时间基准，模型只能凭记忆推                                                                                           | `topic-cluster.buildMaterialPayload` 与 `renderTopicBrief` 都注入代码生成的 `【当前日期】`，并为每条素材加“距当前 N 天”；skill 步骤表同步写明“时效判断只能以此为准，不得凭记忆推测今天是几号” |
 
 #### 第二次真跑结果
 
@@ -183,7 +230,8 @@ skill 的材料门槛。这是缺口，不是调参问题。
   抓到 GitHub 仓库作为补料；
 - 审稿闸门：**机器达标 84/100**，关键三项 16/18/15 均过 12 分下限；
 - 隐私后检：代码层与模型层均 0 命中；
-- **未发布**：`publish=false`，只落 18 份留档 + 本地草稿，成稿自带“需作者阅读确认”；
+- **未发布**：`publish=false`，只落 18 份留档 +
+  本地草稿，成稿自带“需作者阅读确认”；
 - 留下两个待作者处理的风险：多条素材同源却并列为“两条线”、
   关键开源仓库未给可落地地址。
 
@@ -195,26 +243,24 @@ skill 的材料门槛。这是缺口，不是调参问题。
 大量一句半句的回复、转发、感叹和跨语言噪音。几十个字的推文既给不出事实与数字，
 也撑不起机制判断，进主题包只会让「素材充分度」看起来比实际高。
 
-| 项 | 决定 |
-| --- | --- |
-| 门槛 | 默认 **120 字**，`DEEP_ARTICLE_MIN_TWEET_CHARS` 可调 |
+| 项       | 决定                                                                                                      |
+| -------- | --------------------------------------------------------------------------------------------------------- |
+| 门槛     | 默认 **120 字**，`DEEP_ARTICLE_MIN_TWEET_CHARS` 可调                                                      |
 | 适用范围 | 只卡 X 系来源（`x-search` / `twitter` / `twitter-cookie` / `twitter-frontend`）；firecrawl 的文章页不受限 |
-| 位置 | 去重与时效之后、条数上限**之前**（否则 20 字的回复会把长帖挤在截断线外） |
-| 长度口径 | 正文**原始字符数**，不剔 URL、不剔空白 |
-| 留档 | `00-素材清单.md` 新增「因过短被筛掉的 X 推文」段，逐条列出字数 |
+| 位置     | 去重与时效之后、条数上限**之前**（否则 20 字的回复会把长帖挤在截断线外）                                  |
+| 长度口径 | 正文**原始字符数**，不剔 URL、不剔空白                                                                    |
+| 留档     | `00-素材清单.md` 新增「因过短被筛掉的 X 推文」段，逐条列出字数                                            |
 
-口径为什么不去 URL：真跑里那条 2026-06-27 的直播资料帖原文 205 字，
-剔掉三个 `doc.laoyao.cn` 链接后只剩 66 字，但它是三份文档的唯一入口，
-正是补料要用的素材 —— 按「剔完剩多少字」判会误杀。
+口径为什么不去 URL：真跑里那条 2026-06-27 的直播资料帖原文 205 字， 剔掉三个
+`doc.laoyao.cn` 链接后只剩 66 字，但它是三份文档的唯一入口， 正是补料要用的素材
+—— 按「剔完剩多少字」判会误杀。
 
 阈值取 120 的依据（关键词 GEO 的真实分布）：41 条里最短 20 字、中位数 138 字；
-所有 7 条有分析价值的推文都在 **144–205 字**，取 120 能全部保住，
-同时筛掉 18 条几十个字的噪音（41 → 23）。
+所有 7 条有分析价值的推文都在 **144–205 字**，取 120 能全部保住， 同时筛掉 18
+条几十个字的噪音（41 → 23）。
 
 已知边界：这条规则管不住「长但跑题」的推文（如把 GEO 当卫星云图、
-日本二手回收、地缘政治用的同形异义帖）。那类靠主题包硬淘汰，
-不靠长度门槛。
-
+日本二手回收、地缘政治用的同形异义帖）。那类靠主题包硬淘汰， 不靠长度门槛。
 
 ## [未发布] - 2026-09-26
 
