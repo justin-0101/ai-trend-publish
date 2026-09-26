@@ -1,6 +1,9 @@
 import { getDataSources } from "../data-sources/getDataSources.ts";
-import { ContentRanker } from "../modules/content-rank/ai.content-ranker.ts";
-import { RankResult } from "../modules/interfaces/content-ranker.interface.ts";
+import { createRanker } from "../modules/content-rank/ranker.factory.ts";
+import {
+  RankerLike,
+  RankResult,
+} from "../modules/interfaces/content-ranker.interface.ts";
 import { ContentPublisher } from "../modules/interfaces/publisher.interface.ts";
 import {
   ContentScraper,
@@ -172,7 +175,9 @@ export class WeixinArticleWorkflow
   private publisher: ContentPublisher;
   private notifier: BarkNotifier;
   private renderer: WeixinArticleTemplateRenderer;
-  private contentRanker: ContentRanker;
+  // 懒加载：引擎选择要读配置（可能走 DB 源，是异步的），构造器里拿不到。
+  // 首次排序时才决定是 LLM 还是 JEV，判错开关的成本降为 0。
+  private contentRanker: RankerLike | null = null;
   private stats = {
     success: 0,
     failed: 0,
@@ -195,7 +200,13 @@ export class WeixinArticleWorkflow
     this.publisher = new WeixinPublisher();
     this.notifier = new BarkNotifier();
     this.renderer = new WeixinArticleTemplateRenderer();
-    this.contentRanker = new ContentRanker();
+  }
+
+  private async getContentRanker(): Promise<RankerLike> {
+    if (!this.contentRanker) {
+      this.contentRanker = await createRanker();
+    }
+    return this.contentRanker;
   }
 
   public getWorkflowStats(eventId: string) {
@@ -541,7 +552,7 @@ export class WeixinArticleWorkflow
         logger.info(`[内容排序] 开始排序 ${filteredContents.length} 条内容`);
         // 关键词要传进排序：不传时 LLM 只能按「AI 热度」打分，
         // 结果就是主题内容被泛 AI 热点挤掉（实测成稿 10 条只剩 2 条在题上）。
-        const ranked = await this.contentRanker.rankContents(
+        const ranked = await (await this.getContentRanker()).rankContents(
           filteredContents,
           includeKeywords,
         );
@@ -555,8 +566,11 @@ export class WeixinArticleWorkflow
           (content) => !scoredIds.has(String(content.id)),
         );
         if (skipped.length > 0) {
+          // 引擎名跟着实际结果走：LLM 路径仍是「[排序] LLM 漏评 N 条」（回归判据），
+          // JEV 路径下如果也打 LLM 会误导排查方向。
+          const engine = ranked.find((item) => item.engine)?.engine ?? "LLM";
           logger.info(
-            `[排序] LLM 漏评 ${skipped.length} 条（共 ${filteredContents.length} 条），按 0 分补在末尾`,
+            `[排序] ${engine} 漏评 ${skipped.length} 条（共 ${filteredContents.length} 条），按 0 分补在末尾`,
           );
           ranked.push(...skipped.map((content) => ({
             id: String(content.id),

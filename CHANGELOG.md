@@ -2,6 +2,47 @@
 
 ## [未发布] - 2026-09-27
 
+### 内容排序层接入 Jev（TypeSafe System One）——**代码已落地，默认仍走 LLM**
+
+#### 为什么做
+
+现有排序让大模型吐一段纯文本 `文章ID: 分数`，三个真实缺陷：正则一不匹配就抛错、会漏评（得按 0 分补齐）、只有分数没有不确定度。Jev 是结构化判定接口（一次 state + 若干 typed questions → 每题一个带概率与置信度的答案）。
+
+#### 新增
+
+| 文件 | 内容 |
+| --- | --- |
+| `src/providers/interfaces/system-one.interface.ts` | System One 契约，**按 `api.typesafe.ai/openapi.json`（匿名可读）写的**，不是照文档页猜的 |
+| `src/providers/system-one/jev.client.ts` | 自带状态码分流与重试的 HTTP 客户端（**不复用 `HttpClient`**，见下） |
+| `src/prompts/content-ranker.rubric.ts` | 4 维权重（20/45/20/15，与提示词一致）、档位措辞、归一化与合成公式 |
+| `src/modules/content-rank/jev.content-ranker.ts` | 一篇一次请求、4 问 fan-out、并发默认 5；单篇失败不上抛 |
+| `src/modules/content-rank/ranker.factory.ts` | `AI_CONTENT_RANKER_ENGINE` 选引擎 + 整批成功率回落 LLM（回落必打日志） |
+| `scripts/check-jev-ranker.ts` | A/B 脚本：`--dry-run`（预览要发什么，零请求）/ `--env-check`（只 `GET /v1/models`）/ 默认真跑 |
+| `src/test/modules/content-rank/*.test.ts` | 35 条测试，全部用注入的 fetch/sleep/client，不联网、不发素材 |
+
+#### 改了什么
+
+| 位置 | 改动 |
+| --- | --- |
+| `src/modules/interfaces/content-ranker.interface.ts` | `RankResult` 加 `confidence` / `engine` / `detail`（均为可选，LLM 路径下不动）；新增窄接口 `RankerLike` |
+| `src/services/weixin-article.workflow.ts` | `new ContentRanker()` → 懒加载 `createRanker()`；排序后的补 0 / 排序 / 关键词重排 / 去重**一行未动** |
+| `.env.example` | 新增全部 JEV 键与回滚说明；**`.env` 未动**，所以本机行为不变 |
+
+#### 四个刻意的设计决定
+
+1. **不复用 `HttpClient`**：它是单例，`setDefaultHeader` 会覆盖大模型的 `Authorization`；且 `retryFetch` 对任何非 2xx 都重试 3 次、忽略 `retry-after`，还把错误包成不含 status 的 Error。Jev 客户端按请求传 header、自带分流（429 读 `retry-after`、5xx/超时指数退避、4xx 立即失败）。
+2. **失败不抛异常**：单篇失败只记日志并从结果里缺席，交给工作流既有的「漏评按 0 分补在末尾」兜底 —— 不把同一件事写两遍，也不掩盖「Jev 漏了几条」这个验证信号。
+3. **不阻塞出稿**：整批成功率低于 `JEV_FALLBACK_THRESHOLD`（0.9）或直接抛错时回落 LLM，并显式打一行日志；`JEV_FALLBACK_TO_LLM=false` 时才报错。回滚成本 = 改一个环境变量 + 重启。
+4. **含图 +10 在代码里算**：Jev 只吃文本读不到图，不补就会静默丢掉提示词里的一条既有规则（并封顶 100）。
+
+#### **尚未完成（卡点）**
+
+- **真实 A/B 未跑**：没有 `JEV_API_KEY`。
+- **对外传输未确认**：真跑会把采集到的正文（可能含未发布内容）发往 `api.typesafe.ai`，这一条必须本人确认；
+- 档位措辞未用真实语料校准；置信度门禁未实现（一期保持不启用）。
+
+细节与修正记录见 `docs/JEV_RANKER_INTEGRATION_PLAN.md` 第 13 节。
+
 ### 采集源模块：4 个固定预置采集类型 + 删除（隐藏）
 
 #### 采集源改为固定预置

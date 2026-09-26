@@ -3,7 +3,7 @@
 - 项目：`F:\个人项目管理\ai-trend-publish`（TrendPublish 趋势发布系统）
 - 日期：2026-09-27
 - 范围：**只改内容排序（rank）一层**，其余链路不动
-- 状态：待确认（见第 11 节），确认后按第 9 节顺序执行
+- 状态：**代码已落地（默认仍走 LLM）；真实 A/B 未跑** —— 卡在第 11 节第 1、2 条（见第 13 节）
 
 ---
 
@@ -119,6 +119,15 @@ export interface SystemOneResponse {
 
 > ⚠️ **字段名必须先用一次真实最小请求钉死再写实现。**
 > 官方 `docs.typesafe.ai/primitives/score` 明确写 `type` / `instructions` / `criteria`；但 API reference 页被抽取后字段名有歧义（可能叫 `score`）。不要照猜，先跑通再落地。
+>
+> ✅ **2026-09-27 已解**：不用发真实请求 —— `https://api.typesafe.ai/openapi.json`
+> 匿名可读（14KB，OpenAPI 3.1），已抓取核对并作为唯一契约来源：
+> `ScoreQuestion{type,criteria,instructions?}`、`ScoreAnswer{type,score,confidence,legend,probabilities}`、
+> `SystemOneResponse{model,answers,usage}`（usage 必填）。同时**发现本节两处写错**：
+> - `NoulQuestion` 没有 `noul` 字段（问句在 `instructions`，可选 `criteria:{true,false}`）；
+> - `NoulAnswer` 没有 `confidence`（官方只对 score / choice 返回置信度）。
+>
+> 落地代码按 OpenAPI 写，见 `src/providers/interfaces/system-one.interface.ts`。风险清单第 8 条关闭。
 
 ### 4.2 Score 的两条硬规则（官方文档）
 
@@ -458,3 +467,63 @@ JEV_MIN_CONFIDENCE=0
 8. **字段名歧义。** 官方文档里 Score 问题的字段名（`instructions` / `criteria` vs 其它）在 API reference 抽取后有歧义。落地前必须先用一次真实最小请求校准，见 4.1 的警告。
 9. **置信度 ≠ 正确率。** 它是校准过的概率，不是保证。若启用门禁，阈值必须用带标注的历史素材定，不能照抄文档。
 10. **成本记账。** 官方挂价是输入 $0.042/百万 token、输出免费。一轮 30 篇、每篇约 3k 字符量级，成本在**分位美元以下**——但这是按文档价推算的量级，不是账单承诺；实际要按 `usage.input_tokens` 记账。
+
+---
+
+## 13. 落地记录与方案修正（2026-09-27）
+
+### 13.1 已落地（全部默认关闭，`AI_CONTENT_RANKER_ENGINE` 缺省即 LLM）
+
+| 文件 | 内容 |
+|---|---|
+| `src/providers/interfaces/system-one.interface.ts`（新增） | 按 `openapi.json` 写的 System One 契约 |
+| `src/providers/system-one/jev.client.ts`（新增） | 自带状态码分流与重试的 HTTP 客户端，**不复用 `HttpClient`** |
+| `src/prompts/content-ranker.rubric.ts`（新增） | 4 维权重（20/45/20/15）、档位措辞、归一化与合成公式 |
+| `src/modules/content-rank/jev.content-ranker.ts`（新增） | 一篇一请求、4 问 fan-out、并发 5、失败不上抛 |
+| `src/modules/content-rank/ranker.factory.ts`（新增） | 引擎选择 + 整批回落，回落必打日志 |
+| `src/modules/interfaces/content-ranker.interface.ts`（改） | `RankResult` 加 `confidence` / `engine` / `detail`；新增窄接口 `RankerLike` |
+| `src/services/weixin-article.workflow.ts`（改） | `new ContentRanker()` → 懒加载 `createRanker()`；排序后半段一行未动 |
+| `.env.example`（改） | 第 10 节全部新键 + 回滚说明。**`.env` 未改**，所以本机行为不变 |
+| `scripts/check-jev-ranker.ts`（新增） | A/B 脚本：`--dry-run`（预览会发什么，不发请求）/ `--env-check`（只验 key）/ 默认真跑 |
+| `src/test/modules/content-rank/*.test.ts`（新增 4 个文件 35 条） | 档位/权重/置信度数学、状态码分流与重试、单篇失败、回落阈值、引擎判定 |
+
+### 13.2 执行中发现的方案问题（已按修正落地）
+
+| # | 方案原文 | 问题 | 修正 |
+|---|---|---|---|
+| 1 | 6.3「5xx 复用 `RetryUtil`」 | `RetryUtil` 对 4xx 一样重试；它对 `WorkflowTerminateError` 的早退分支若拿来表达「401 不重试」，会把终止错误抛进 step，**连带终止整条出稿流程** | 客户端自带重试循环（429 读 `retry-after`、5xx/超时指数退避、4xx 立即失败），不依赖 `RetryUtil`；并新增「`retry-after` 超过 30s 直接失败」，避免一个巨大等待把 5 分钟 step 拖死 |
+| 2 | 4.1 的 `NoulQuestion` / `NoulAnswer` | 字段形状与官方不符（见上方 4.1 注） | 按 OpenAPI 修正；本期只用 score，noul 一并写对以免日后照抄 |
+| 3 | 7.2「`JevContentRanker implements ContentRanker`」 | 现有 `ContentRanker` 接口的 `rankContents(contents)` **没有 keywords 参数**，而工作流实际调用 `rankContents(contents, keywords)`；且接口还要求 `rankContentsBatch`，Jev 侧没有 | 新增窄接口 `RankerLike`（只有 `rankContents(contents, keywords?)`），工作流依赖它；同时在原接口上给 `rankContents` 补可选 `keywords` |
+| 4 | 6.5「失败的那些按 score=0 排到末尾」 | 工作流里已有「漏评按 0 分补在末尾」的兜底，在 ranker 里再补一遍等于同一件事写两处，并会**掩盖「Jev 漏了几条」这个验证信号** | ranker 只返回成功条目 + 打日志（含失败明细与原因）；补 0 交给既有兜底 |
+| 5 | 8.1 把「Top-N 重合率 ≥ 80%」当唯一硬指标，8.2 第 1 条 `<60%` 直接下线 | 与第 2 节「一期不动关键词相关度」自相矛盾：LLM 提示词里有「命中关键词从 50 分起、泛热点 ≤40 分」的规则，Jev 这一期没有 —— 两条路径**输入信息本就不同**，重合率偏低是预期行为，不是失败信号 | 脚本同时输出「原始 Top-N 重合率」与「关键词重排后 Top-N 重合率」；建议把硬判据改成**后者**（它才等于成稿主题命中），原始重合率只做观测 |
+| 6 | 7.3 顺序第 1 步「先跑验证脚本拿 A/B 数据」 | 脚本本身要发素材到第三方，第 11 节第 2 条又还没确认 | 脚本拆出 `--dry-run`（把将要发送的 state、问题和 token 估算先打印出来，零请求）与 `--env-check`（只 `GET /v1/models`），顺序倒过来：**先看要发什么 → 再决定是否发** |
+| 7 | 5 节「含图 +10 必须在代码里算」 | 正确，但需注意封顶：满分素材 + 10 会到 110 | 取 `min(100, base + bonus)`，并有回归测试 |
+| 8 | 10 节 `JEV_MIN_CONFIDENCE=0` | 一期不启用，但键写在 `.env.example` 里没有任何代码读它 | 保留键并注明「一期不启用」；代码里不实现门禁，避免出现一个看起来能用的空开关 |
+
+### 13.3 尚未完成（卡点，不是遗漏）
+
+1. **真实 A/B 未跑**：缺 `JEV_API_KEY`（第 11 节第 1 条）。本机 `.env` 里没有该键。
+2. **对外传输未确认**：第 11 节第 2 条要你本人拍 —— 一旦真跑，采集到的正文（可能含未发布内容）会发往 `api.typesafe.ai`。
+3. **档位措辞未校准**：官方要求拿自己的真实语料测；现在这四组是直译初稿，等 13.3 第 1 条解锁后看分维度置信度分布再改。
+4. **置信度门禁未实现**：建议一期维持 0（不启用）。
+5. **`detail` 未落库**：目前只有 `content.metadata.score` 会被写；要不要留存分维度分数/概率待定（第 11 节第 5 条）。
+
+### 13.4 已完成验证
+
+- `deno check`：新增 6 个文件 + 工作流 + A/B 脚本全部通过（仓库另有 6 处**既有**类型错误在 `controllers/cron.ts` 与 `services/workflow-config.service.ts`，与本次改动无关）。
+- `deno test src/test/modules/content-rank/`：**35 条全绿**（不联网、不发素材，全部用注入的 fetch/sleep/client）。
+- `deno test`（`data-source-registry` + `scrapers` + `content-rank` + `workflow-config`）：56 条全绿。
+- `scripts/check-jev-ranker.ts --dry-run --n 3`：跑通，确认只读日志、不发请求。
+
+### 13.5 解锁后怎么跑
+
+```bash
+# 1) 先看会发什么（不需要 key，不发请求）
+deno run --allow-env --allow-read --env scripts/check-jev-ranker.ts --dry-run --n 30
+# 2) 只在 .env 里加 JEV_API_KEY，验鉴权（GET /v1/models，仍不发素材）
+deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --env-check
+# 3) 本人确认可以对外传素材后，跑真 A/B
+deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --n 30
+# 4) 达标才切引擎（否则维持 LLM）
+#    .env: AI_CONTENT_RANKER_ENGINE="JEV"   然后重启
+```
