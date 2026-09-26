@@ -854,6 +854,7 @@
               <select id="workflow-type">
                 <option value="">请选择</option>
                 <option value="weixin-article">文章工作流</option>
+                <option value="weixin-deep-article">深度文工作流</option>
                 <option value="weixin-hellogithub">HelloGitHub</option>
                 <option value="weixin-aibench">AI Bench</option>
               </select>
@@ -1746,6 +1747,15 @@
           flowDescPublish.textContent = "渠道：微信草稿箱";
           return;
         }
+        if (type === "weixin-deep-article") {
+          flowTypePill.textContent = "深度文";
+          flowDescSource.textContent =
+            "来源：180 天窗口 → X 短推文过滤 → 候选补料抓取 → 一手资格对账";
+          flowDescScore.textContent = "主题包聚类 + 爆款评分（选 1 个主题）";
+          flowDescRender.textContent = "skill：write-ai-wechat-article（观察者评论位）";
+          flowDescPublish.textContent = "默认只出稿归档，不自动发布";
+          return;
+        }
         flowTypePill.textContent = "AI Bench";
         flowDescSource.textContent = "来源：LiveBench + 评测榜";
         flowDescScore.textContent = "指标归一 + 趋势计算";
@@ -1847,9 +1857,12 @@
         const typeEl = getEl("workflow-type");
         const type = typeEl && typeEl.value ? typeEl.value : "";
         const isArticle = type === "weixin-article";
+        const isDeep = type === "weixin-deep-article";
         const isHello = type === "weixin-hellogithub";
-        getEl("workflow-source").disabled = !isArticle;
-        getEl("workflow-max").disabled = !isArticle;
+        // 深度文也用来源与关键词（主题包靠关键词搜索），所以和文章工作流同样放开
+        const supportsSource = isArticle || isDeep;
+        getEl("workflow-source").disabled = !supportsSource;
+        getEl("workflow-max").disabled = !supportsSource;
         getEl("workflow-max-items").disabled = !isHello;
 
         // 关键词框只在选「X 关键词搜索」时出现。其他来源里这个框没有对应语义，
@@ -1858,7 +1871,7 @@
         const keywordsField = getEl("workflow-keywords-field");
         const sourceEl = getEl("workflow-source");
         if (keywordsField) {
-          keywordsField.hidden = !isArticle || sourceEl.value !== "x-search";
+          keywordsField.hidden = !supportsSource || sourceEl.value !== "x-search";
         }
       };
 
@@ -1941,6 +1954,23 @@
           return {
             type,
             payload: { maxItems, publish: publishMode === "immediate", publishMode },
+          };
+        }
+        if (type === "weixin-deep-article") {
+          const sourceType = settings.run.sourceType || settings.core.article.sourceType;
+          const maxMaterials = settings.run.maxArticles ?? settings.core.article.maxArticles;
+          const publishMode = settings.run.publishMode || "draft";
+          // 深度文默认只出稿：即使选了「立即发布」，工作流还会再校验量表与隐私，
+          // 不过关就只归档并报原因，不会硬发。
+          return {
+            type,
+            payload: {
+              sourceType,
+              maxMaterials,
+              includeKeywords: settings.run.includeKeywords,
+              publish: publishMode === "immediate",
+              publishMode,
+            },
           };
         }
         const publishMode = settings.run.publishMode || "draft";

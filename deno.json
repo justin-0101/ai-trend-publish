@@ -21,7 +21,9 @@
     "@std/assert": "jsr:@std/assert@1",
     "@src/": "./src/",
     "@zilla/logger": "jsr:@zilla/logger@^1.0.1",
-    "@sapling/markdown": "https://deno.land/x/sapling_markdown@v1.0.0/mod.ts"
+    "@sapling/markdown": "https://deno.land/x/sapling_markdown@v1.0.0/mod.ts",
+    "firecrawl": "npm:firecrawl@1.19.0",
+    "zod": "npm:zod@3.24.2"
   },
   "exclude": [
     "node_modules",

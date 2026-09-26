@@ -35,6 +35,10 @@ interface XSearchPost {
   dt?: string;
   who?: string;
   text?: string;
+  articleRef?: string;
+  isArticle?: boolean;
+  articleTitle?: string;
+  articleFetched?: boolean;
   likes?: string;
   media?: boolean;
   promo?: boolean;
@@ -53,7 +57,11 @@ const SKILL_DIR_CANDIDATES: Array<{ envKey?: string; dir?: string }> = [
   { envKey: "X_SEARCH_SKILL_DIR" },
   { dir: "E:/openclaw-skills/x-search-collector" },
   { dir: "skills/x-search-collector" },
-  { dir: `${Deno.env.get("USERPROFILE") ?? ""}/.pi/agent/skills/x-search-collector` },
+  {
+    dir: `${
+      Deno.env.get("USERPROFILE") ?? ""
+    }/.pi/agent/skills/x-search-collector`,
+  },
   { dir: `${Deno.env.get("HOME") ?? ""}/.pi/agent/skills/x-search-collector` },
 ];
 
@@ -70,7 +78,9 @@ export class XSearchScraper implements ContentScraper {
         ? await this.config(candidate.envKey)
         : candidate.dir;
       if (!dir) continue;
-      const script = `${dir.replace(/[\\/]+$/, "")}/scripts/collect-x-search.mjs`;
+      const script = `${
+        dir.replace(/[\\/]+$/, "")
+      }/scripts/collect-x-search.mjs`;
       try {
         if ((await Deno.stat(script)).isFile) return script;
       } catch {
@@ -187,9 +197,12 @@ export class XSearchScraper implements ContentScraper {
       // 没有 status id 就等于没有稳定主键：工作流后续按 id 去重/排序，
       // 硬塞一条无主键的内容会让同一条推文在文章里出现两次。
       if (!id) continue;
+      const articleUrl = post.articleRef
+        ? new URL(post.articleRef, "https://x.com").href
+        : "";
       contents.push({
         id,
-        title: text.split("\n")[0].slice(0, 100),
+        title: (post.articleTitle || text.split("\n")[0]).slice(0, 100),
         content: text,
         url: `https://x.com${post.ref}`,
         publishDate: post.dt
@@ -203,21 +216,44 @@ export class XSearchScraper implements ContentScraper {
           author: post.who ?? "",
           likes: post.likes ?? "",
           hasMedia: post.media === true,
+          xArticle: post.isArticle === true,
+          xArticleUrl: articleUrl,
+          xArticleFetched: post.articleFetched === true,
         },
       });
     }
 
-    if (contents.length > maxPosts) {
-      logger.debug(`[X搜索] ${contents.length} → ${maxPosts}（按 X_SEARCH_MAX_POSTS 截断）`);
-      contents.length = maxPosts;
+    // X Article 通常承载的是长文。优先把已识别的 Article 放在截断线以内，
+    // 避免普通短帖先占满 X_SEARCH_MAX_POSTS。正文仍以搜索卡片 text 为准，
+    // 后续可凭 xArticleUrl 做全文展开；不能把「识别为 Article」误报成已抓到全文。
+    const prioritized = [...contents].sort((a, b) =>
+      Number(b.metadata.xArticle === true) -
+      Number(a.metadata.xArticle === true)
+    );
+
+    if (prioritized.length > maxPosts) {
+      logger.debug(
+        `[X搜索] ${prioritized.length} → ${maxPosts}（按 X_SEARCH_MAX_POSTS 截断，Article 优先）`,
+      );
+      prioritized.length = maxPosts;
     }
 
     logger.debug(
-      `[X搜索] ${query} 抓到 ${doc.rawCount ?? posts.length} 条，可用 ${contents.length} 条，` +
-        `用时 ${((Date.now() - started) / 1000).toFixed(1)}s，原始数据: ${rawOut}`,
+      `[X搜索] ${query} 抓到 ${
+        doc.rawCount ?? posts.length
+      } 条，可用 ${contents.length} 条，` +
+        `用时 ${
+          ((Date.now() - started) / 1000).toFixed(1)
+        }s，原始数据: ${rawOut}`,
     );
 
-    return contents;
+    const articleCount =
+      prioritized.filter((item) => item.metadata.xArticle === true).length;
+    if (articleCount > 0) {
+      logger.debug(`[X搜索] 识别 X Article ${articleCount} 条，已优先保留`);
+    }
+
+    return prioritized;
   }
 
   /** `/user/status/123456` → `123456` */

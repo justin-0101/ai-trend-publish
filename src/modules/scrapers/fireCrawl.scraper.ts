@@ -1,4 +1,4 @@
-import FirecrawlApp from "npm:firecrawl";
+import FirecrawlApp from "firecrawl";
 import {
   ContentScraper,
   ScrapedContent,
@@ -6,13 +6,13 @@ import {
 } from "../interfaces/scraper.interface.ts";
 import { ConfigManager } from "../../utils/config/config-manager.ts";
 import { formatDate } from "../../utils/common.ts";
-import zod from "npm:zod";
+import zod from "zod";
 
 const logger = {
   info: (msg: string) => console.log(msg),
   error: (msg: string, ...args: unknown[]) => console.error(msg, ...args),
   warn: (msg: string) => console.warn(msg),
-  debug: (msg: string) => console.debug(msg)
+  debug: (msg: string) => console.debug(msg),
 };
 
 // 使用 zod 定义数据结构
@@ -47,9 +47,55 @@ export class FireCrawlScraper implements ContentScraper {
     return `fc_${timestamp}_${random}_${Math.abs(urlHash)}`;
   }
 
+  /**
+   * 直接读取一个具体页面的正文，供深度文的定向补料使用。
+   *
+   * 不能复用下面的 `scrape()`：它的提示词专门从列表页提取“今日 AI 新闻”，
+   * 拿去读官方文档会返回空数组，或把页面里的链接误当成另一批新闻。
+   */
+  async scrapePage(sourceId: string): Promise<ScrapedContent | null> {
+    try {
+      await this.refresh();
+      const result = await this.app.scrapeUrl(sourceId, {
+        formats: ["markdown"],
+        onlyMainContent: true,
+        removeBase64Images: true,
+        blockAds: true,
+      });
+      if (!result.success) {
+        throw new Error(result.error || "未获取到页面正文");
+      }
+
+      const content = (result.markdown ?? "").trim();
+      if (!content) return null;
+
+      const metadata = result.metadata ?? {};
+      const sourceUrl = String(metadata.sourceURL ?? result.url ?? sourceId);
+      const rawDate = metadata.publishedTime ?? metadata.modifiedTime ??
+        metadata.dctermsCreated ?? metadata.dcDateCreated ?? metadata.dcDate;
+      return {
+        id: this.generateId(sourceUrl),
+        title: String(
+          metadata.title ?? metadata.ogTitle ?? result.title ?? sourceUrl,
+        ),
+        content,
+        url: sourceUrl,
+        publishDate: rawDate ? formatDate(String(rawDate)) : "",
+        metadata: {
+          ...metadata,
+          source: "fireCrawl-page",
+          originalUrl: sourceId,
+        },
+      };
+    } catch (error) {
+      logger.error("FireCrawl页面抓取失败:", error);
+      throw error;
+    }
+  }
+
   async scrape(
     sourceId: string,
-    options?: ScraperOptions,
+    _options?: ScraperOptions,
   ): Promise<ScrapedContent[]> {
     try {
       await this.refresh();

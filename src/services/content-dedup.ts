@@ -33,6 +33,16 @@ import { RankResult } from "../modules/interfaces/content-ranker.interface.ts";
 export interface DedupeOptions {
   /** 字符二元组包含度阈值，默认 0.9（越高越保守） */
   threshold?: number;
+  /**
+   * 按位置而不是按 id 建立「原文索引」。
+   *
+   * 默认 false，保持既有行为。置 true 给 id 可能重复的调用方。
+   * 为什么需要它：id 重复（例如同一条推文的 url 被两个源各抽一次，id 就是 url）时，
+   * `byId` 只会留下最后一条，于是**重复项的 id 与代表项完全相同**；
+   * 调用方若再按 id 过滤存活项，就会把重复项全部捞回来，去重等于没做。
+   * 读 `dedupeScrapedContents` 就免了这个坑。
+   */
+  keyByIndex?: boolean;
 }
 
 export interface DroppedItem {
@@ -42,6 +52,14 @@ export interface DroppedItem {
   reason: string;
   /** 文本相似度，仅 similarity 规则有值 */
   similarity?: number;
+}
+
+/** dedupeScrapedContents 额外带回下标，便于留档写清「第几条被顶掉」 */
+export interface DroppedAt extends DroppedItem {
+  /** 在入参数组里的下标 */
+  atIndex: number;
+  /** 代表项在入参数组里的下标 */
+  duplicateOfIndex: number;
 }
 
 export interface DedupeResult {
@@ -116,7 +134,12 @@ export const dedupeContents = (
   options: DedupeOptions = {},
 ): DedupeResult => {
   const threshold = options.threshold ?? 0.9;
-  const byId = new Map(contents.map((c) => [String(c.id), c]));
+  const byId = new Map(
+    contents.map((c, index) => [
+      options.keyByIndex ? String(index) : String(c.id),
+      c,
+    ]),
+  );
   const kept: RankResult[] = [];
   const keptPrints: Fingerprint[] = [];
   const dropped: DroppedItem[] = [];
@@ -188,4 +211,44 @@ export const dedupeContents = (
   }
 
   return { kept, dropped };
+};
+
+/**
+ * 按位置去重，返回保留下来的**原文**而不是 id。
+ *
+ * 专门给 id 可能重复的调用方用（深度文工作流：同一条推文会被 twitter 与
+ * twitter-cookie 两个源各抽一次，id 取的就是 url）。按 id 过滤存活项在这种数据上
+ * 会把重复项全捞回来，等于没去重；按下标就与 id 是否重复无关了。
+ *
+ * 返回的 `dropped` 里的 id 已还原成**原文的 id**，并附上在入参数组里的下标
+ * （`atIndex` / `duplicateOfIndex`）——留档时才能写清“第几条被谁顶掉了”。
+ */
+export const dedupeScrapedContents = (
+  contents: ScrapedContent[],
+  options: DedupeOptions = {},
+): { kept: ScrapedContent[]; dropped: DroppedAt[] } => {
+  if (contents.length === 0) return { kept: [], dropped: [] };
+
+  const ordered: RankResult[] = contents.map((_, index) => ({
+    id: String(index),
+    score: 0,
+  }));
+  const { kept, dropped } = dedupeContents(ordered, contents, {
+    ...options,
+    keyByIndex: true,
+  });
+  const keptIndexes = new Set(kept.map((item) => String(item.id)));
+
+  return {
+    kept: contents.filter((_, index) => keptIndexes.has(String(index))),
+    dropped: dropped.map((entry) => ({
+      ...entry,
+      id: String(contents[Number(entry.id)]?.id ?? entry.id),
+      duplicateOf: String(
+        contents[Number(entry.duplicateOf)]?.id ?? entry.duplicateOf,
+      ),
+      atIndex: Number(entry.id),
+      duplicateOfIndex: Number(entry.duplicateOf),
+    })),
+  };
 };

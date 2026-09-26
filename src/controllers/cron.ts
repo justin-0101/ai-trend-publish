@@ -1,5 +1,6 @@
 // 使用Deno原生cron API
 import { WeixinArticleWorkflow } from "@src/services/weixin-article.workflow.ts";
+import { WeixinDeepArticleWorkflow } from "@src/services/weixin-deep-article.workflow.ts";
 import { WeixinAIBenchWorkflow } from "@src/services/weixin-aibench.workflow.ts";
 import { WeixinHelloGithubWorkflow } from "@src/services/weixin-hellogithub.workflow.ts";
 import { BarkNotifier } from "@src/modules/notify/bark.notify.ts";
@@ -11,6 +12,7 @@ export enum WorkflowType {
   WeixinArticle = "weixin-article-workflow",
   WeixinAIBench = "weixin-aibench-workflow",
   WeixinHelloGithub = "weixin-hellogithub-workflow",
+  WeixinDeepArticle = "weixin-deep-article-workflow",
 }
 
 function getWorkflow(type: WorkflowType): WorkflowEntrypoint {
@@ -34,6 +36,13 @@ function getWorkflow(type: WorkflowType): WorkflowEntrypoint {
         id: "weixin-hellogithub-workflow",
         env: {
           name: "weixin-hellogithub-workflow",
+        },
+      });
+    case WorkflowType.WeixinDeepArticle:
+      return new WeixinDeepArticleWorkflow({
+        id: "weixin-deep-article-workflow",
+        env: {
+          name: "weixin-deep-article-workflow",
         },
       });
     case WorkflowType.ToutiaoArticle:

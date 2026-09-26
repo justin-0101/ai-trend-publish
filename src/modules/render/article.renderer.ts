@@ -20,6 +20,7 @@ export class WeixinArticleTemplateRenderer
       "data-report",
       "bytedance",
       "daimo",
+      "deep",
     ];
     this.enableImageProcessing = enableImageProcessing;
   }
@@ -90,6 +91,7 @@ export class WeixinArticleTemplateRenderer
         "/templates/article/article.bytedance.ejs",
       ),
       daimo: await this.getTemplateContent("/templates/article/article.daimo.ejs"),
+      deep: await this.getTemplateContent("/templates/article/article.deep.ejs"),
     };
   }
 

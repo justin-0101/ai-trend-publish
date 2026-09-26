@@ -4,6 +4,7 @@ import { getDataSources } from "@src/data-sources/getDataSources.ts";
 import { poolConnection } from "@src/db/db.ts";
 import { WeixinAIBenchWorkflow } from "@src/services/weixin-aibench.workflow.ts";
 import { WeixinArticleWorkflow } from "@src/services/weixin-article.workflow.ts";
+import { WeixinDeepArticleWorkflow } from "@src/services/weixin-deep-article.workflow.ts";
 import { WeixinHelloGithubWorkflow } from "@src/services/weixin-hellogithub.workflow.ts";
 import { WeixinArticleTemplateRenderer } from "@src/modules/render/article.renderer.ts";
 import { HelloGithubTemplateRenderer } from "@src/modules/render/hellogithub.renderer.ts";
@@ -93,7 +94,8 @@ type WorkflowJob = {
 type ApiWorkflowType =
   | "weixin-article"
   | "weixin-aibench"
-  | "weixin-hellogithub";
+  | "weixin-hellogithub"
+  | "weixin-deep-article";
 
 const docsDir = join(Deno.cwd(), "docs");
 const workflowJobs = new Map<string, WorkflowJob>();
@@ -832,7 +834,7 @@ const jsonResponse = (data: unknown, status = 200) =>
     },
   });
 
-type PreviewWorkflowType = "article" | "hellogithub" | "aibench";
+type PreviewWorkflowType = "article" | "hellogithub" | "aibench" | "deep-article";
 
 const clampNumber = (
   value: number | null,
@@ -852,6 +854,9 @@ const normalizePreviewWorkflow = (value: unknown): PreviewWorkflowType => {
     return "hellogithub";
   }
   if (value === "weixin-aibench" || value === "aibench") return "aibench";
+  if (value === "weixin-deep-article" || value === "deep-article") {
+    return "deep-article";
+  }
   return "article";
 };
 
@@ -865,6 +870,7 @@ const normalizeArticleTemplate = (value: unknown) => {
     "data-report",
     "bytedance",
     "daimo",
+    "deep",
   ];
   if (supported.includes(name)) return name;
   return "modern";
@@ -876,6 +882,11 @@ const normalizeArticleTemplate = (value: unknown) => {
 // 而不是所有模板都显示「AI 热点速递 1」。
 type ArticlePreviewVariant = {
   titlePrefix: string;
+  subtitle?: string;
+  /** 刊头名，模板里用 <%= brand %> 取值 */
+  brand?: string;
+  /** 刊头副标，模板里用 <%= tagline %> 取值 */
+  tagline?: string;
   paragraphs: string[];
   keywords: string[];
   metadata: {
@@ -960,6 +971,21 @@ const ARTICLE_PREVIEW_VARIANTS: Record<string, ArticlePreviewVariant> = {
     keywords: ["案例复盘", "知识库", "Agent 落地"],
     metadata: { score: 0.87, wordCount: 580, readTime: 3 },
   },
+  // 深度文预览：单篇长文，与速递类模板的「多条摘要」形态区分开
+  deep: {
+    titlePrefix: "深度解读",
+    subtitle: "一个行业动作改变了谁的哪一种成本",
+    brand: "AI 周报",
+    tagline: "TECH · INSIGHT · UPDATE",
+    paragraphs: [
+      "先说被广泛转述的那个说法：这次降价把入门成本打了下来。",
+      "但一手定价页还写了两条被省略的限定条件，它们会改变结论的适用范围。",
+      "把成本拆开看，降的是试用门槛，不是长期使用成本。真正被抬高的是迁移成本。",
+      "所以我的判断标准是：先看计价单位变没变，再看自己会不会被锁在一条路线上。",
+    ],
+    keywords: ["成本结构", "定价页", "迁移成本"],
+    metadata: { score: 0.9, wordCount: 1500, readTime: 6 },
+  },
 };
 
 const buildArticlePreviewData = (count: number, templateType: string) => {
@@ -969,6 +995,7 @@ const buildArticlePreviewData = (count: number, templateType: string) => {
   return Array.from({ length: count }, (_, index) => ({
     id: `preview-${templateType}-${index + 1}`,
     title: `${variant.titlePrefix} ${index + 1}`,
+    subtitle: variant.subtitle,
     brand: variant.brand ?? "AI 周报",
     tagline: variant.tagline ?? "TECH · INSIGHT · UPDATE",
     content: variant.paragraphs
@@ -1059,6 +1086,11 @@ const renderPreviewHtml = async (
     const templateData = renderer.transformData(buildAIBenchPreviewData());
     return await renderer.render(templateData, "default");
   }
+  if (workflowType === "deep-article") {
+    // 深度文是单篇，用 deep 模板；count 固定为 1，避免预览里出现多篇合集的错觉
+    const renderer = new WeixinArticleTemplateRenderer(false);
+    return await renderer.render(buildArticlePreviewData(1, "deep"), "deep");
+  }
   const renderer = new WeixinArticleTemplateRenderer(false);
   const articles = buildArticlePreviewData(count, templateType);
   return await renderer.render(articles, templateType);
@@ -1136,6 +1168,15 @@ const createWorkflow = (type: ApiWorkflowType) => {
         id: "weixin-hellogithub-workflow",
         env: {
           name: "weixin-hellogithub-workflow",
+          draftWriter: addDraft,
+          draftStatusWriter: updateDraftStatusById,
+        },
+      });
+    case "weixin-deep-article":
+      return new WeixinDeepArticleWorkflow({
+        id: "weixin-deep-article-workflow",
+        env: {
+          name: "weixin-deep-article-workflow",
           draftWriter: addDraft,
           draftStatusWriter: updateDraftStatusById,
         },
@@ -1342,7 +1383,7 @@ const startUiServer = () => {
       const type = body.type as ApiWorkflowType;
       if (
         type !== "weixin-article" && type !== "weixin-aibench" &&
-        type !== "weixin-hellogithub"
+        type !== "weixin-hellogithub" && type !== "weixin-deep-article"
       ) {
         return jsonResponse({ message: "Unsupported workflow type" }, 400);
       }

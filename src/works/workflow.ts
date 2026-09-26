@@ -238,12 +238,20 @@ export class WorkflowStep {
     fn: () => Promise<T>,
     timeout: number,
   ): Promise<T> {
-    return Promise.race([
-      fn(),
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error("Step timeout")), timeout);
-      }),
-    ]);
+    // 定时器必须在结束时清掉。
+    // 不清的后果：每个 step.do 都留下一个最长 30 分钟的挂起 timer，
+    // 工作流有十几个步骤时既拖住事件循环退出，也让测试报 leaks。
+    let timer: number | undefined;
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Step timeout")), timeout);
+        }),
+      ]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   }
 
   private parseDelay(delay: string | number): number {

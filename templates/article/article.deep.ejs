@@ -1,0 +1,30 @@
+<!-- 深度文：单篇长文，无序号、无榜单结构 -->
+<div style="margin:0 auto;max-width:680px;padding:36px 22px 28px;background:#fffdfa;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;line-height:1.9;color:#26232a;">
+  <div style="margin:0 0 26px;color:#8a5a2b;font-size:12px;letter-spacing:0.18em;"><%= tagline || 'TECH · INSIGHT · UPDATE' %></div>
+
+  <% articles.forEach(function(article) { %>
+    <div style="margin:0 0 10px;font-family:'Source Han Serif SC','Songti SC','Noto Serif CJK SC',Georgia,serif;font-size:29px;font-weight:700;color:#1a181d;line-height:1.4;letter-spacing:0.2px;"><%= article.title %></div>
+
+    <% if (article.subtitle) { %>
+      <div style="margin:0 0 22px;color:#6f6875;font-size:15px;line-height:1.7;"><%= article.subtitle %></div>
+    <% } %>
+
+    <div style="margin:0 0 24px;padding:0 0 20px;border-bottom:1px solid #eee7df;color:#8d8693;font-size:13px;">
+      <span><%= brand || 'AI 周报' %></span>
+      <% if (article.publishDate) { %><span style="margin-left:12px;"><%= article.publishDate %></span><% } %>
+      <% if (article.metadata && article.metadata.readTime) { %><span style="margin-left:12px;">约 <%= article.metadata.readTime %> 分钟</span><% } %>
+    </div>
+
+    <div style="font-size:16px;color:#26232a;text-align:justify;">
+      <% var paragraphs = String(article.content || '').split('<next_paragraph />'); for (var k = 0; k < paragraphs.length; k++) { var para = paragraphs[k].trim(); if (para.length > 0) { %>
+        <div style="margin:0 0 19px;line-height:1.95;"><%- para %></div>
+      <% } } %>
+    </div>
+
+    <% var keywords = article.keywords || (article.metadata && article.metadata.keywords) || []; if (keywords && keywords.length > 0) { %>
+      <div style="margin:26px 0 0;padding-top:16px;border-top:1px solid #eee7df;color:#8d8693;font-size:13px;">关键词：<%= keywords.slice(0, 6).join(' · ') %></div>
+    <% } %>
+  <% }); %>
+
+  <div style="margin:24px 0 0;padding:16px 0;color:#a098a4;font-size:12px;line-height:1.7;text-align:center;">本文经过机器审稿量表校验，发布前需作者本人阅读确认。</div>
+</div>
