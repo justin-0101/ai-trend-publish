@@ -489,7 +489,8 @@ const publishDraftById = async (id: string) => {
   }
   const draft = drafts[index];
   const publisher = new WeixinPublisher();
-  const author = Deno.env.get("AUTHOR") || "AI春长";
+  // 默认值用占位符：仓库是公开的，不该把公众号名写进代码（真实值放 .env 的 AUTHOR）
+  const author = Deno.env.get("AUTHOR") || "your_name";
   let thumbMediaId = draft.thumbMediaId;
   // 草稿没记录封面 ID 时，自动生成封面（三级降级）：
   //   1) 智谱 cogview-4 出**无文字**科技感底图 → 本地叠中文标题 → 压到 <64KB → 上传

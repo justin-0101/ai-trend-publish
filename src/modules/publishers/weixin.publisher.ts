@@ -369,7 +369,8 @@ export class WeixinPublisher implements ContentPublisher {
     thumbMediaId: string,
     options?: { title?: string; author?: string },
   ): Promise<WeixinDraft> {
-    const author = options?.author || Deno.env.get("AUTHOR") || "AI春长";
+    // 兜底值用占位符：仓库公开，公众号名不入代码（真实值走 options 或 .env 的 AUTHOR）
+    const author = options?.author || Deno.env.get("AUTHOR") || "your_name";
     const title = options?.title || "每日AI趋势";
     const digest = content.substring(0, 80).replace(/<[^>]*>/g, "").replace(/\n/g, " ").substring(0, 60) + "...";
     const response = await fetch(

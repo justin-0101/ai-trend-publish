@@ -99,6 +99,9 @@
 cp scripts/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 ```
 
+**附带清理**：作者名的兑底默认值原本写着**真实公众号名**（3 处：`publish-with-images.ts`、`src/index.ts`、`src/modules/publishers/weixin.publisher.ts`），
+现改为占位符 `your_name`，真实值只留在 `.env` 的 `AUTHOR`。与 AppID 同理，这 3 处此前已在公开仓库里。
+
 **已知边界**：不带公司后缀的名称（如单写「腾讯」）只能靠「同现客户类上下文词」或本地名单拦住 ——
 所以真实客户名要么写进本地名单，要么接受这个缺口。守卫是防手滑，不是防有意绕过（`--no-verify` 可跳过）。
 

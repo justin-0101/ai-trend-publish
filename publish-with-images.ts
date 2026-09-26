@@ -10,7 +10,7 @@ import { ConfigManager } from "./src/utils/config/config-manager.ts";
 const args = Deno.args;
 let filePath = "";
 let title = "AI趋势观察";
-let author = "AI春长";
+let author = Deno.env.get("AUTHOR") || "your_name"; // 公开仓库不写真实公众号名，默认用占位符
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--file" && args[i + 1]) filePath = args[++i];
