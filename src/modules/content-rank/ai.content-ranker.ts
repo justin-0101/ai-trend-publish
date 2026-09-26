@@ -29,7 +29,10 @@ export class ContentRanker {
     );
   }
 
-  public async rankContents(contents: ScrapedContent[]): Promise<RankResult[]> {
+  public async rankContents(
+    contents: ScrapedContent[],
+    keywords: string[] = [],
+  ): Promise<RankResult[]> {
     if (!contents.length) {
       return [];
     }
@@ -41,7 +44,7 @@ export class ContentRanker {
         );
         const messages: ChatMessage[] = [
           { role: "system", content: getSystemPrompt() },
-          { role: "user", content: getUserPrompt(contents) },
+          { role: "user", content: getUserPrompt(contents, keywords) },
         ];
 
         const response = await llmProvider.createChatCompletion(messages);

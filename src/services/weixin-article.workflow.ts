@@ -1,5 +1,6 @@
 import { getDataSources } from "../data-sources/getDataSources.ts";
 import { ContentRanker } from "../modules/content-rank/ai.content-ranker.ts";
+import { RankResult } from "../modules/interfaces/content-ranker.interface.ts";
 import { ContentPublisher } from "../modules/interfaces/publisher.interface.ts";
 import {
   ContentScraper,
@@ -28,6 +29,7 @@ import {
   markArchivedDraftPublished,
   readPublishFailure,
 } from "./draft-archive.ts";
+import { dedupeContents } from "./content-dedup.ts";
 import { resolveCover } from "@src/utils/image/cover-fallback.ts";
 import ProgressBar from "@deno-library/progress";
 
@@ -35,6 +37,91 @@ const logger = {
   info: (msg: string, ...args: unknown[]) => console.log(msg, ...args),
   error: (msg: string, ...args: unknown[]) => console.error(msg, ...args),
   debug: (msg: string, ...args: unknown[]) => console.debug(msg, ...args),
+};
+
+/**
+ * 从「包含关键词」里拆出可用来判相关的检索词。
+ *
+ * 这几个词是 X 搜索表达式，不是纯词：
+ *   `"generative engine optimization" OR 生成式引擎优化`
+ * 整串拿去和正文做 includes 永远匹配不上（正文里不会同时出现引号和 OR），
+ * 所以先按 OR 拆、去掉引号、丢掉过短的碎片。
+ */
+export const keywordTerms = (keywords: string[]): string[] => {
+  const terms = new Set<string>();
+  for (const raw of keywords) {
+    for (const piece of String(raw).split(/\s+OR\s+/i)) {
+      const term = piece.replace(/["'“”‘’()]/g, "").trim().toLowerCase();
+      if (term.length >= 2) terms.add(term);
+    }
+  }
+  return [...terms];
+};
+
+/**
+ * 由检索词生成匹配器。
+ *
+ * 只按全称短语匹配会漏一大半：中文社区写「GEO」远多于写「生成式引擎优化」，
+ * 实测同一批 30 条里，全称命中 10 条，加上缩写命中 20 条。
+ * 所以多词英文短语额外用首字母缩写（generative engine optimization → GEO，
+ * search engine optimization → SEO）按词边界匹配；这里不写死 GEO——
+ * 写死一个词，换个话题就失效，而且 GEO 与 Geometry 这类词也得分得开。
+ */
+export const keywordMatchers = (
+  terms: string[],
+): Array<(text: string) => boolean> => {
+  const matchers: Array<(text: string) => boolean> = [];
+  const acronyms = new Set<string>();
+  for (const term of terms) {
+    matchers.push((text) => text.toLowerCase().includes(term));
+    const words = term.split(/\s+/).filter((w) => /^[a-z]+$/.test(w));
+    if (words.length >= 2) {
+      acronyms.add(words.map((w) => w[0]).join("").toUpperCase());
+    }
+  }
+  for (const acronym of acronyms) {
+    if (acronym.length < 2) continue;
+    const pattern = new RegExp(`(?<![A-Za-z])${acronym}(?![a-z])`);
+    matchers.push((text) => pattern.test(text));
+  }
+  return matchers;
+};
+
+/**
+ * 把「正文命中关键词」的条目排到前面，其余按原分数跟在后面补位。
+ *
+ * 为什么必须有这一步：排序分只看创新性/实用度/热度，**不含主题贴合度**。
+ * 实测同一批采集（原始精度 82%），成稿 10 条里只有 2 条在题上——
+ * 高热度的泛 AI 内容（AI 制药、Web3、Luma 教程…）把主题内容挤出了前 10。
+ *
+ * 是「先出相关的」，不是「只出相关的」：命中的不够 10 条时，仍用其余条目补满，
+ * 否则等于把 x-search「宽匹配」这个前提又推翻了。
+ */
+export const prioritizeByKeywordRelevance = (
+  ranked: RankResult[],
+  contents: ScrapedContent[],
+  terms: string[],
+): RankResult[] => {
+  const matchers = keywordMatchers(terms);
+  if (matchers.length === 0) return ranked;
+  const byId = new Map(contents.map((c) => [String(c.id), c]));
+  const hitsKeyword = (item: RankResult): boolean => {
+    const content = byId.get(String(item.id));
+    if (!content) return false;
+    const text = `${content.title ?? ""}\n${content.content ?? ""}`;
+    return matchers.some((match) => match(text));
+  };
+  const relevant: RankResult[] = [];
+  const others: RankResult[] = [];
+  for (const item of ranked) {
+    (hitsKeyword(item) ? relevant : others).push(item);
+  }
+  logger.info(
+    `[排序] 关键词相关优先：命中 ${relevant.length} 条，未命中 ${others.length} 条（检索词: ${
+      terms.join(" | ")
+    }）`,
+  );
+  return [...relevant, ...others];
 };
 
 interface WeixinWorkflowEnv {
@@ -336,14 +423,64 @@ export class WeixinArticleWorkflow
         timeout: "5 minutes",
       }, async () => {
         logger.info(`[内容排序] 开始排序 ${filteredContents.length} 条内容`);
-        const ranked = await this.contentRanker.rankContents(filteredContents);
+        // 关键词要传进排序：不传时 LLM 只能按「AI 热度」打分，
+        // 结果就是主题内容被泛 AI 热点挤掉（实测成稿 10 条只剩 2 条在题上）。
+        const ranked = await this.contentRanker.rankContents(
+          filteredContents,
+          includeKeywords,
+        );
         if (ranked.length === 0) {
           throw new WorkflowTerminateError("内容排序失败，没有任何内容被评分");
         }
+        // LLM 漏评的条目按 0 分补在末尾：不补等于被悄悄丢掉。
+        // 提示词已要求它返回全部（去重已改由代码做），这里兜的是「没听劝」的情况。
+        const scoredIds = new Set(ranked.map((item) => String(item.id)));
+        const skipped = filteredContents.filter(
+          (content) => !scoredIds.has(String(content.id)),
+        );
+        if (skipped.length > 0) {
+          logger.info(
+            `[排序] LLM 漏评 ${skipped.length} 条（共 ${filteredContents.length} 条），按 0 分补在末尾`,
+          );
+          ranked.push(...skipped.map((content) => ({
+            id: String(content.id),
+            score: 0,
+          })));
+        }
         // 先按分数排序
         ranked.sort((a, b) => b.score - a.score);
+        // 再让「正文命中关键词」的排到前面：分数里没有主题贴合度这一维，
+        // 不重排的话高热度泛 AI 内容会稳定挤掉主题内容。
+        const ordered = prioritizeByKeywordRelevance(
+          ranked,
+          filteredContents,
+          keywordTerms(includeKeywords),
+        );
+        // 去重放最后一步：此处顺序已是「关键词命中在前、同组内按分数降序」，
+        // 「保留先出现的」就等于「留下最相关、分最高的那条」，不需要再写一遍关键词逻辑。
+        // 更重要的是：去重不再交给 LLM —— 它之前会顺手把「同主题、不同事件」的内容
+        // 也合并掉（30 条常只回来 17~29 条），丢哪条不可控、也无法审计。
+        const { kept, dropped } = dedupeContents(ordered, filteredContents);
+        if (dropped.length > 0) {
+          const detail = dropped
+            .map((d) =>
+              `${d.reason}:${d.id}→${d.duplicateOf}${
+                d.similarity === undefined ? "" : `(${d.similarity})`
+              }`
+            )
+            .slice(0, 5)
+            .join(", ");
+          logger.info(
+            `[去重] 输入 ${ordered.length} → 保留 ${kept.length}｜${detail}${
+              dropped.length > 5 ? " …" : ""
+            }`,
+          );
+        } else {
+          // 0 合并也要留一行：否则「去重到底跑没跑」在日志里看不出来
+          logger.info(`[去重] 输入 ${ordered.length} → 保留 ${kept.length}（无重复）`);
+        }
         logger.info("[内容排序] 内容排序完成");
-        return ranked;
+        return kept;
       });
 
       // 5. 处理排序后的内容

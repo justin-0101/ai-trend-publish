@@ -39,11 +39,10 @@ export function getSystemPrompt(): string {
           - 开源AI项目和社区动态
           - 如果文章中包含图片，则权重增加10分
   
-          相似内容处理：
-          - 识别主题、技术点或事件相同的文章
-          - 对于相似文章，只保留质量最高（分数最高）的一篇
-          - 其他相似文章将被过滤，不出现在最终结果中
-  
+          不要做去重：
+          - 对每一篇文章都要给出分数，一篇都不能少（少一条就等于系统少一个候选）
+          - 相似或重复的文章也照常打分：去重由系统在评分之后处理，不要在这里省略
+
           请仔细阅读文章，并按照以下格式返回评分结果：
           文章ID: 分数
           文章ID: 分数
@@ -56,11 +55,24 @@ export function getSystemPrompt(): string {
           4. 分数要有明显区分度，避免所有文章分数过于接近
           5. 重点关注最新发布的AI产品、工具和技术突破
           6. 对于深度技术文章，应在技术创新性上给予更高权重
-          7. 相似文章组中只返回分数最高的一篇，其他相似文章不返回`;
+          7. 必须返回全部文章ID：漏掉的文章会被当成 0 分，直接丢掉出稿机会，所以宁可给低分也不要省略`;
 }
 
-export function getUserPrompt(contents: ScrapedContent[]): string {
-  return contents.map((content) => (
+export function getUserPrompt(
+  contents: ScrapedContent[],
+  keywords: string[] = [],
+): string {
+  // 有关键词时，先把「这次要什么」写进提示词。
+  // 不写会怎样：排序只看创新性/热度，「GEO」这种垂直话题会被 AI 制药、
+  // 大模型 SOTA 这类高热泛新闻挤下去；实测 10 条成稿只剩 2 条在题上。
+  const focus = keywords.length > 0
+    ? `本次选题关键词（用户明确要的主题）: ${keywords.join(" | ")}\n` +
+      `评分时必须以「与上述关键词的相关度」为先：\n` +
+      `  - 直接讨论该主题的内容，评分从 50 分起；\n` +
+      `  - 只是泛 AI 热点、与该主题无关的内容，最高不超过 40 分；\n` +
+      `  - 相似或重复的内容也照常打分，不要省略（去重由系统处理）\n\n`
+    : "";
+  return focus + contents.map((content) => (
     `文章ID: ${content.id}\n` +
     `标题: ${content.title}\n` +
     `发布时间: ${content.publishDate}\n` +
