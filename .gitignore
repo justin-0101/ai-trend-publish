@@ -10,6 +10,9 @@ temp
 *.bak
 *.exe
 
+# 推送守卫的本地敏感名单（真实单位/客户名，绝不入库）
+.prepush-blocklist.local.txt
+
 # Build output
 dist/
 *.exe
@@ -45,7 +48,7 @@ Thumbs.db
 .env.local
 .env.*.local
 .env.bak*
-*.bak
+.bak
 *.tmp
 *.msi
 *.iso

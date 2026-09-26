@@ -1,0 +1,19 @@
+#!/bin/sh
+# TrendPublish 推送前守卫（git pre-push 钩子）
+#
+# 作用：推送前扫「本次要推的文件」，命中 .env 真值 / 客户公司名 就拒绝推送。
+# 实现都在 scripts/prepush-guard.ts 里，本文件只是入口 —— 改规则请改那边。
+#
+# 安装（新克隆的仓库需要执行一次）：
+#   cp scripts/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# 临时跳过（不推荐）：git push --no-verify
+
+root=$(git rev-parse --show-toplevel)
+
+deno_bin="$root/.deno/bin/deno.exe"          # 项目自带的 deno
+[ -x "$deno_bin" ] || deno_bin="$HOME/.deno/bin/deno.exe"
+[ -x "$deno_bin" ] || deno_bin="deno"        # 退回到 PATH 里的 deno
+
+exec "$deno_bin" run --allow-read --allow-run --allow-env --no-check \
+  "$root/scripts/prepush-guard.ts"

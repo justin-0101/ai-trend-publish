@@ -105,7 +105,7 @@ DB_DATABASE=trendfinder  # 数据库名称
 
 ```
 # 微信公众号API配置
-WEIXIN_APP_ID="wxb1addb7df62b0a0a"          # 微信公众号AppID
+WEIXIN_APP_ID="wx_your_appid"          # 微信公众号AppID
 WEIXIN_APP_SECRET=""  # 微信公众号AppSecret
 
 # 微信文章配置
