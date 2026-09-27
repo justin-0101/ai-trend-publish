@@ -77,6 +77,29 @@ deno task build:linux-arm64 # ARM架构
 deno task build:all
 ```
 
+## 🔧 自检脚本（`scripts/`）
+
+排查与验证用的独立脚本，直接 `deno run`，**不参与线上流程**。下表标了每个脚本的对外副作用，不确定会不会往外发数据时先看这里。
+
+| 脚本 | 用途 | 对外 / 副作用 |
+| --- | --- | --- |
+| `check-jev-ranker.ts --env-check` | Jev 端点与鉴权自检。**有 key** 走 `GET /v1/models`；**无 key 也能跑**，走空请求匿名探测（`403/401` = 端点存活且确实要 key） | 只发空请求，**不含任何素材** |
+| `check-jev-ranker.ts --dry-run --n 30` | 打印将要送往 Jev 的单篇 `state`、4 个维度的档位与 token／费用估算 | **不发任何请求** |
+| `check-jev-ranker.ts --n 30` | 同一批素材跑 LLM / Jev 两条排序路径，输出重合率、置信度分布、逐篇对照 | 素材正文**发往第三方**（`api.typesafe.ai`），并调用 LLM；仅本人确认后使用 |
+| `check-keyword-relevance.ts`、`check-dedup.ts` | 用本地真实采集数据自查关键词重排 / 内容去重 | 只读本地 |
+| `smoke-collect.ts`、`smoke-filter.ts`、`verify-x-search.ts` | 采集通道冒烟：逐条看能不能真的拿到资料（`verify-x-search` 走浏览器） | **会联网采集** |
+| `prepush-guard.ts` | 推送前守卫：扫本次要推的文件，命中 `.env` 真值或公司名就拒绝推送（由 `.git/hooks/pre-push` 调用） | 本地 git，不联网 |
+| `md2html.ts` | 把 `docs/` 下的 markdown 生成 HTML（`deno task build:docs`） | 写 `docs/` 下的 HTML |
+
+最常用的一条（不需要 key）：
+
+```bash
+# 确认 Jev 端点活着、且确实要求鉴权；不发素材
+deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --env-check
+```
+
+> 排序层接 Jev 的方案、落地状态与尚未完成的卡点：`docs/JEV_RANKER_INTEGRATION_PLAN.md`。
+
 ## 🌟 主要功能
 
 - 🤖 多源数据采集
