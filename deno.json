@@ -17,6 +17,7 @@
     "build:docs": "deno run --allow-all scripts/md2html.ts"
   },
   "imports": {
+    "https://deno.land/x/imagescript@1.2.17/utils/wasm/": "./vendor/imagescript-wasm/",
     "@deno-library/progress": "jsr:@deno-library/progress@^1.5.1",
     "@std/assert": "jsr:@std/assert@1",
     "@src/": "./src/",
