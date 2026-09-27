@@ -7,7 +7,9 @@
  *   # 1) 只看「会往外发什么」——不发任何请求，不需要 key（对外传输前先自己看一眼）
  *   deno run --allow-env --allow-read --env scripts/check-jev-ranker.ts --dry-run
  *
- *   # 2) 只验 key 与连通性（GET /v1/models，不发送素材）
+ *   # 2) 验连通性
+ *   #    - 有 key：GET /v1/models 验鉴权（不发送素材）
+ *   #    - 无 key：匿名探测（空请求、无鉴权头，仍不发送素材）——只看端点活不活、是否强制鉴权
  *   deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --env-check
  *
  *   # 3) 真跑 A/B（**会把素材正文发到 api.typesafe.ai**，需本人先确认）
@@ -114,12 +116,94 @@ const tieCount = (scores: number[]) => {
   return [...seen.values()].filter((n) => n > 1).reduce((acc, n) => acc + n, 0);
 };
 
+// ---------------------------------------------------------------- 端点自检
+
+/** 把探测到的状态码翻译成「这对我们意味着什么」 */
+export const interpretProbeStatus = (status: number): string => {
+  switch (status) {
+    case 401:
+    case 403:
+      return "端点存活且强制鉴权（符合预期：缺 key）";
+    case 200:
+      return "异常：没带 key 也返回 200 —— 端点未强制鉴权，先别接";
+    case 404:
+      return "路径不对：baseUrl 或 API 版本可能变了";
+    case 429:
+      return "限速（端点活着，但当前出口 IP 被限流）";
+    default:
+      return status >= 500 ? "端点故障或在维护" : "未知状态，先人工看一眼响应体";
+  }
+};
+
+/**
+ * 无 key 时的端点自检。
+ *
+ * 只发**空请求**：无请求体内容、无 `Authorization` 头 —— 一个字的素材都不发出去，
+ * 却能证明三件事：域名/路径没变、服务活着、没 key 确实进不去（而不是静默降级）。
+ * 2026-09-27 手工跑过同样两步，当时两个接口都返回 403 + authentication_error。
+ */
+const probeAnonymous = async (baseUrl: string): Promise<void> => {
+  console.log("[探测] 未配置 JEV_API_KEY → 走匿名探测：空请求、无鉴权头、不发送任何素材内容");
+  console.log(`        目标: ${baseUrl}（GET /v1/models 与 POST /v1/systemone）`);
+  const targets: Array<{ label: string; url: string; init: RequestInit }> = [
+    { label: "GET  /v1/models    ", url: `${baseUrl}/v1/models`, init: { method: "GET" } },
+    {
+      label: "POST /v1/systemone ",
+      url: `${baseUrl}/v1/systemone`,
+      // 空体：服务端在鉴权阶段就会拒绝，根本走不到字段校验，所以不会评价任何内容
+      init: { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+    },
+  ];
+  for (const target of targets) {
+    try {
+      const res = await fetch(target.url, {
+        ...target.init,
+        signal: AbortSignal.timeout(15000),
+      });
+      const body = (await res.text()).replace(/\s+/g, " ").slice(0, 200);
+      console.log(`  ${target.label} → HTTP ${res.status}  ${interpretProbeStatus(res.status)}`);
+      if (body) console.log(`      响应体: ${body}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`  ${target.label} → 连不上（${message}）｜查网络/代理，或 JEV_BASE_URL 写错`);
+    }
+  }
+  console.log("\n  403/401 是好消息：缺的只是一把 key，不是代码或地址的问题。");
+  console.log("  拿到 key 后：写进 .env 的 JEV_API_KEY，再跑一次 --env-check（会走 GET /v1/models 验鉴权）。");
+};
+
 // ---------------------------------------------------------------- 主流程
 
 const bootstrap = async () => {
   const configManager = ConfigManager.getInstance();
   configManager.clearSources();
   configManager.addSource(new EnvConfigSource());
+
+  const baseUrl = String(
+    (await readOptionalConfig("JEV_BASE_URL")) ?? "https://api.typesafe.ai",
+  );
+  const apiKey = String((await readOptionalConfig("JEV_API_KEY")) ?? "");
+  const model = String((await readOptionalConfig("JEV_MODEL")) ?? "jev-1.13.0");
+
+  // ---- 1) 验连通性。**不需要素材**：自检不应该因为「logs 里没有采集日志」就跑不成。
+  if (ENV_CHECK) {
+    if (!apiKey) {
+      await probeAnonymous(baseUrl);
+      return;
+    }
+    const client = new JevClient({
+      baseUrl,
+      apiKey,
+      model,
+      timeoutMs: Number((await readOptionalConfig("JEV_TIMEOUT_MS")) ?? 15000),
+    });
+    const models = await client.listModels();
+    console.log(
+      `[连通性] 鉴权通过，当前 key 可用模型: ${models.map((m) => m.name).join(", ")}`,
+    );
+    console.log("        下一步：先 --dry-run 看要发出去什么，再决定要不要真跑 A/B。");
+    return;
+  }
 
   const file = argOf("--file") ?? newestXSearchLog();
   const materials = loadMaterials(file).slice(0, TOP_N);
@@ -130,9 +214,6 @@ const bootstrap = async () => {
   console.log(
     `关键词: ${JSON.stringify(keywordTerms(argOf("--keywords") ? [argOf("--keywords")!] : []))}`,
   );
-
-  const apiKey = String((await readOptionalConfig("JEV_API_KEY")) ?? "");
-  const model = String((await readOptionalConfig("JEV_MODEL")) ?? "jev-1.13.0");
 
   // ---- 1) 只预览发出去的内容
   if (DRY_RUN || !apiKey) {
@@ -157,7 +238,10 @@ const bootstrap = async () => {
       ).toFixed(6)}）`,
     );
     if (!apiKey) {
-      console.log("\n⚠️  未配置 JEV_API_KEY：以上仅为预览，未发送任何请求。");
+      console.log(
+        "\n⚠️  未配置 JEV_API_KEY：以上仅为预览，未发送任何请求。\n" +
+          "    想确认端点活着没、是不是真要 key：跑 --env-check（空请求，同样不发素材）。",
+      );
     } else {
       console.log("\n以上为 --dry-run 预览，未发送任何请求。");
     }
@@ -165,18 +249,11 @@ const bootstrap = async () => {
   }
 
   const client = new JevClient({
-    baseUrl: String((await readOptionalConfig("JEV_BASE_URL")) ?? "https://api.typesafe.ai"),
+    baseUrl,
     apiKey,
     model,
     timeoutMs: Number((await readOptionalConfig("JEV_TIMEOUT_MS")) ?? 15000),
   });
-
-  // ---- 2) 只验连通性
-  if (ENV_CHECK) {
-    const models = await client.listModels();
-    console.log(`[连通性] 鉴权通过，可用模型: ${models.map((m) => m.name).join(", ")}`);
-    return;
-  }
 
   // ---- 3) 真跑 A/B
   const concurrency = Number((await readOptionalConfig("JEV_CONCURRENCY")) ?? 5);

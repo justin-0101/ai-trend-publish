@@ -17,8 +17,8 @@
 | `src/prompts/content-ranker.rubric.ts` | 4 维权重（20/45/20/15，与提示词一致）、档位措辞、归一化与合成公式 |
 | `src/modules/content-rank/jev.content-ranker.ts` | 一篇一次请求、4 问 fan-out、并发默认 5；单篇失败不上抛 |
 | `src/modules/content-rank/ranker.factory.ts` | `AI_CONTENT_RANKER_ENGINE` 选引擎 + 整批成功率回落 LLM（回落必打日志） |
-| `scripts/check-jev-ranker.ts` | A/B 脚本：`--dry-run`（预览要发什么，零请求）/ `--env-check`（只 `GET /v1/models`）/ 默认真跑 |
-| `src/test/modules/content-rank/*.test.ts` | 35 条测试，全部用注入的 fetch/sleep/client，不联网、不发素材 |
+| `scripts/check-jev-ranker.ts` | A/B 脚本：`--dry-run`（预览要发什么，零请求）/ `--env-check`（有 key 则验鉴权；无 key 则匿名探测端点，空请求不发素材）/ 默认真跑 |
+| `src/test/modules/content-rank/*.test.ts` | 38 条测试，全部用注入的 fetch/sleep/client，不联网、不发素材 |
 
 #### 改了什么
 
@@ -38,7 +38,7 @@
 
 #### **尚未完成（卡点）**
 
-- **真实 A/B 未跑**：没有任何 Jev 凭证（已核 `.env`：TypeSafe / OpenRouter / Cloudflare / Vercel / `JEV_API_KEY` 五条通道全无）；
+- **真实 A/B 未跑**：没有任何 Jev 凭证（已核 `.env`：TypeSafe / OpenRouter / Cloudflare / Vercel / `JEV_API_KEY` 五条通道全无）。**无 key 也能自检**：`--env-check` 会发空请求探测端点，实测返回 403 `authentication_error`（端点存活 + 强制鉴权）；
 - **对外传输未确认**：真跑会把采集到的正文（可能含未发布内容）发往 `api.typesafe.ai`，这一条必须本人确认；
 - 档位措辞未用真实语料校准；置信度门禁未实现（一期保持不启用）。
 

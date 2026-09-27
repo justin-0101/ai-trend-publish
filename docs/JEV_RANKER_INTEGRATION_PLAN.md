@@ -519,6 +519,7 @@ JEV_MIN_CONFIDENCE=0
 - `deno test src/test/modules/content-rank/`：**35 条全绿**（不联网、不发素材，全部用注入的 fetch/sleep/client）。
 - `deno test`（`data-source-registry` + `scrapers` + `content-rank` + `workflow-config`）：56 条全绿。
 - `scripts/check-jev-ranker.ts --dry-run --n 3`：跑通，确认只读日志、不发请求。
+- `scripts/check-jev-ranker.ts --env-check`（**无 key**）：跑通，输出两个接口均为 403 + `authentication_error`；该分支不需要 `logs/` 里有采集日志。
 - **真实端点探测（无 key、无内容、空请求）**：`GET /v1/models` 与 `POST /v1/systemone` 均返回
   **403** + `{"detail":{"error_type":"authentication_error","message":"Must supply an API key!"}}`
   —— 证实端点存活、强制鉴权，并据此修正了 403 的分类提示（不是「无权限」，而是「缺 key / key 无效 / 额度未开通」）。
@@ -527,12 +528,22 @@ JEV_MIN_CONFIDENCE=0
 ### 13.5 解锁后怎么跑
 
 ```bash
+# 0) 无 key 也能验端点：空请求、无鉴权头、不发素材（403/401 = 端点活着且确实要 key）
+deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --env-check
 # 1) 先看会发什么（不需要 key，不发请求）
 deno run --allow-env --allow-read --env scripts/check-jev-ranker.ts --dry-run --n 30
-# 2) 只在 .env 里加 JEV_API_KEY，验鉴权（GET /v1/models，仍不发素材）
+# 2) 有 key 后同样跑 --env-check，这一支换成 GET /v1/models 验鉴权（仍不发素材）
 deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --env-check
 # 3) 本人确认可以对外传素材后，跑真 A/B
 deno run --allow-env --allow-read --allow-net --env scripts/check-jev-ranker.ts --n 30
 # 4) 达标才切引擎（否则维持 LLM）
 #    .env: AI_CONTENT_RANKER_ENGINE="JEV"   然后重启
+```
+
+实测输出（2026-09-27，无 key）：
+
+```
+[探测] 未配置 JEV_API_KEY → 走匿名探测：空请求、无鉴权头、不发送任何素材内容
+  GET  /v1/models     → HTTP 403  端点存活且强制鉴权（符合预期：缺 key）
+  POST /v1/systemone  → HTTP 403  端点存活且强制鉴权（符合预期：缺 key）
 ```
