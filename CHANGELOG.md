@@ -28,16 +28,17 @@
 | `src/services/weixin-article.workflow.ts` | `new ContentRanker()` → 懒加载 `createRanker()`；排序后的补 0 / 排序 / 关键词重排 / 去重**一行未动** |
 | `.env.example` | 新增全部 JEV 键与回滚说明；**`.env` 未动**，所以本机行为不变 |
 
-#### 四个刻意的设计决定
+#### 五个刻意的设计决定
 
-1. **不复用 `HttpClient`**：它是单例，`setDefaultHeader` 会覆盖大模型的 `Authorization`；且 `retryFetch` 对任何非 2xx 都重试 3 次、忽略 `retry-after`，还把错误包成不含 status 的 Error。Jev 客户端按请求传 header、自带分流（429 读 `retry-after`、5xx/超时指数退避、4xx 立即失败）。
+1. **不复用 `HttpClient`**：它是单例，`setDefaultHeader` 会覆盖大模型的 `Authorization`；且 `retryFetch` 对任何非 2xx 都重试 3 次、忽略 `retry-after`，还把错误包成不含 status 的 Error。Jev 客户端按请求传 header、自带分流（429 读 `retry-after`、5xx/408/409 指数退避、超时与网络失败不重试、其余 4xx 立即失败）。
 2. **失败不抛异常**：单篇失败只记日志并从结果里缺席，交给工作流既有的「漏评按 0 分补在末尾」兜底 —— 不把同一件事写两遍，也不掩盖「Jev 漏了几条」这个验证信号。
 3. **不阻塞出稿**：整批成功率低于 `JEV_FALLBACK_THRESHOLD`（0.9）或直接抛错时回落 LLM，并显式打一行日志；`JEV_FALLBACK_TO_LLM=false` 时才报错。回滚成本 = 改一个环境变量 + 重启。
 4. **含图 +10 在代码里算**：Jev 只吃文本读不到图，不补就会静默丢掉提示词里的一条既有规则（并封顶 100）。
+5. **重试白名单收紧（本次修复）**：只重试 `408/409/429/5xx`；超时与连接重置等网络层失败**不重试** —— Jev 按输入 token 计费且无幂等键，重发一个「可能已处理」的付费调用就是重复计费。同时实测（无 key、空请求）：缺 key 时端点返回的是 **403**（`authentication_error`）而不是 401，错误分类提示已据此改准。
 
 #### **尚未完成（卡点）**
 
-- **真实 A/B 未跑**：没有 `JEV_API_KEY`。
+- **真实 A/B 未跑**：没有任何 Jev 凭证（已核 `.env`：TypeSafe / OpenRouter / Cloudflare / Vercel / `JEV_API_KEY` 五条通道全无）；
 - **对外传输未确认**：真跑会把采集到的正文（可能含未发布内容）发往 `api.typesafe.ai`，这一条必须本人确认；
 - 档位措辞未用真实语料校准；置信度门禁未实现（一期保持不启用）。
 

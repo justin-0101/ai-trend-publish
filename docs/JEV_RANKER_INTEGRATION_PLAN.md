@@ -285,8 +285,9 @@ const questions = {
 | 情况 | 处理 |
 |---|---|
 | `429` | 读 `retry-after` 头，按其等待后重试，最多 3 次 |
-| `5xx` / 网络超时 | 指数退避重试，最多 3 次（复用 `RetryUtil`） |
-| `400` / `401` / `402` | **立即失败，不重试**。402 是余额不足，重试无意义 |
+| `5xx` / `408` / `409` | 指数退避重试，最多 3 次 |
+| **网络超时 / 连接重置 / TLS** | **不重试，立即失败**（2026-09-27 修正，见 13.2 第 9 条：付费调用 + 无幂等键，歧义失败重发可能重复计费） |
+| `400` / `401` / `402` / `403` / `404` / `422` | **立即失败，不重试**。402 是余额不足，重试无意义；**实测缺 key 返回的是 403 而不是 401**，响应体 `{"detail":{"error_type":"authentication_error"}}` |
 | 单篇最终失败 | 记录，不抛异常，交给 6.5 的整批判定 |
 
 ### 6.4 配置读取
@@ -499,10 +500,14 @@ JEV_MIN_CONFIDENCE=0
 | 6 | 7.3 顺序第 1 步「先跑验证脚本拿 A/B 数据」 | 脚本本身要发素材到第三方，第 11 节第 2 条又还没确认 | 脚本拆出 `--dry-run`（把将要发送的 state、问题和 token 估算先打印出来，零请求）与 `--env-check`（只 `GET /v1/models`），顺序倒过来：**先看要发什么 → 再决定是否发** |
 | 7 | 5 节「含图 +10 必须在代码里算」 | 正确，但需注意封顶：满分素材 + 10 会到 110 | 取 `min(100, base + bonus)`，并有回归测试 |
 | 8 | 10 节 `JEV_MIN_CONFIDENCE=0` | 一期不启用，但键写在 `.env.example` 里没有任何代码读它 | 保留键并注明「一期不启用」；代码里不实现门禁，避免出现一个看起来能用的空开关 |
+| 9 | 6.3「5xx / **网络超时** → 指数退避重试」 | 对按输入 token 计费、请求体带正文、**无幂等键**的付费调用，超时/连接重置属于「可能已被处理」的歧义失败，重发就是重复计费（`jkudish/jev-mcp` 的 `src/provider.ts` 把同一结论写成了显式契约：只信 408/409/429/5xx 这个「未处理」白名单） | 重试白名单收紧为 `408/409/429/5xx`（导出 `isRetryableStatus` 并锁测试）；超时与网络层失败**不重试**，直接失败交给回落。另：实测无 key 直连返回 **403** 而非 401，403 的提示文案已据此改准 |
 
 ### 13.3 尚未完成（卡点，不是遗漏）
 
-1. **真实 A/B 未跑**：缺 `JEV_API_KEY`（第 11 节第 1 条）。本机 `.env` 里没有该键。
+1. **真实 A/B 未跑**：缺 Jev 凭证。已核实本机 `.env` 里五条通道（`TYPESAFE_API_KEY` / `OPENROUTER_API_KEY` / `CLOUDFLARE_*` / `AI_GATEWAY_API_KEY` / `JEV_API_KEY`）**一个都没有**。可走的门（按推荐次序）：
+   - **TypeSafe 直连**：`console.typesafe.ai` 邮箱/Google 直接登录，键在 `console.typesafe.ai/keys`（早前要排队，第三方 9/22 后的实测称已无需排队，需本人开一次才能定）；
+   - **OpenRouter**：`typesafe/jev-1.13`，官方文档明确「anyone with an OpenRouter API key」，但是 **alpha 端点**（`/api/alpha/decisions`）；
+   - Cloudflare Workers AI / Vercel AI Gateway：其余两条代理通道。
 2. **对外传输未确认**：第 11 节第 2 条要你本人拍 —— 一旦真跑，采集到的正文（可能含未发布内容）会发往 `api.typesafe.ai`。
 3. **档位措辞未校准**：官方要求拿自己的真实语料测；现在这四组是直译初稿，等 13.3 第 1 条解锁后看分维度置信度分布再改。
 4. **置信度门禁未实现**：建议一期维持 0（不启用）。
@@ -514,6 +519,10 @@ JEV_MIN_CONFIDENCE=0
 - `deno test src/test/modules/content-rank/`：**35 条全绿**（不联网、不发素材，全部用注入的 fetch/sleep/client）。
 - `deno test`（`data-source-registry` + `scrapers` + `content-rank` + `workflow-config`）：56 条全绿。
 - `scripts/check-jev-ranker.ts --dry-run --n 3`：跑通，确认只读日志、不发请求。
+- **真实端点探测（无 key、无内容、空请求）**：`GET /v1/models` 与 `POST /v1/systemone` 均返回
+  **403** + `{"detail":{"error_type":"authentication_error","message":"Must supply an API key!"}}`
+  —— 证实端点存活、强制鉴权，并据此修正了 403 的分类提示（不是「无权限」，而是「缺 key / key 无效 / 额度未开通」）。
+- 测试计数：`src/test/modules/content-rank/` **38 条全绿**（含新增的重试白名单与「网络失败不重试」回归）。
 
 ### 13.5 解锁后怎么跑
 

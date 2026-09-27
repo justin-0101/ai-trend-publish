@@ -12,6 +12,10 @@
  * 因此 `RetryUtil` 也不适用（它对 4xx 一样会重试）—— 除了
  * `WorkflowTerminateError` 那条早退分支，而把 Jev 的 401 抛成
  * WorkflowTerminateError 会连带终止整条出稿流程，正是要避免的事。
+ *
+ * **重试白名单**：只重试 408 / 409 / 429 / 5xx。Jev 按输入 token 计费，
+ * 请求体里带的是正文，且没有幂等键；对「可能已被处理」的失败重发就是重复计费。
+ * 所以超时、连接重置等网络层歧义失败一律不重试，直接失败交给排序器的回落。
  */
 import {
   SystemOneModelMetadata,
@@ -76,6 +80,17 @@ const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 /** 官方文档：Score 档位 2–10；OpenAPI 只写了 minItems 1，按文档取严的。 */
 export const SCORE_LEVEL_MIN = 2;
 export const SCORE_LEVEL_MAX = 10;
+
+/**
+ * 唯一允许重试的响应状态码。
+ *
+ * 依据（`jkudish/jev-mcp` 的 `src/provider.ts` 把同一套白名单写成显式契约）：
+ *   408 = 服务端声明未处理；409 = 冲突；429 = 限速；5xx = 服务端错误。
+ * 这几种能确认「没被处理」，重发安全；其余 4xx 重发无用，网络层歧义失败
+ * 重发可能把一个付费调用算两次。
+ */
+export const isRetryableStatus = (status: number): boolean =>
+  status === 408 || status === 409 || status === 429 || status >= 500;
 
 export class JevClient {
   private readonly baseUrl: string;
@@ -154,14 +169,16 @@ export class JevClient {
         retryAfterMs: error.retryAfterMs,
       };
     }
-    // 网络错误 / 超时 / 读体失败：当作可重试
+    // 网络层歧义失败（连接重置、TLS、DNS…）：**不重试**。
+    // 没有幂等键时无法证明服务端没处理过这个请求，而 Jev 按输入 token 计费，
+    // 重发就是为同一篇素材付两次钱。宁可让这一篇失败、走回落。
     const message = error instanceof Error ? error.message : String(error);
     return {
-      retryable: true,
-      error: new JevHttpError(`请求异常: ${message}`, {
-        status: 0,
-        retryable: true,
-      }),
+      retryable: false,
+      error: new JevHttpError(
+        `网络层请求失败（不重试，避免付费调用重复处理）: ${message}`,
+        { status: 0, retryable: false },
+      ),
     };
   }
 
@@ -195,10 +212,10 @@ export class JevClient {
       );
     } catch (error) {
       if ((error as Error)?.name === "AbortError") {
-        throw new JevHttpError(`请求超时（${this.timeoutMs}ms）`, {
-          status: 0,
-          retryable: true,
-        });
+        throw new JevHttpError(
+          `请求超时（${this.timeoutMs}ms），不重试：超时属歧义失败，重发可能重复计费`,
+          { status: 0, retryable: false },
+        );
       }
       throw error;
     } finally {
@@ -208,6 +225,10 @@ export class JevClient {
 
   private describeStatus(status: number): { retryable: boolean; hint: string } {
     switch (status) {
+      case 408:
+        return { retryable: true, hint: "（服务端声明未处理）" };
+      case 409:
+        return { retryable: true, hint: "（冲突）" };
       case 429:
         return { retryable: true, hint: "（限速）" };
       case 400:
@@ -217,14 +238,19 @@ export class JevClient {
       case 402:
         return { retryable: false, hint: "（余额不足，重试无用）" };
       case 403:
-        return { retryable: false, hint: "（无权限）" };
+        // 实测（2026-09-27 无 key 直连）：缺 key 时返回的是 403 而不是 401，
+        // 响应体为 {"detail":{"error_type":"authentication_error",...}}。
+        return {
+          retryable: false,
+          hint: "（鉴权失败：缺 JEV_API_KEY / key 无效 / 额度未开通）",
+        };
       case 404:
         return { retryable: false, hint: "（地址或模型名不对）" };
       case 422:
         return { retryable: false, hint: "（字段校验失败）" };
       default:
         return {
-          retryable: status >= 500,
+          retryable: isRetryableStatus(status),
           hint: status >= 500 ? "（服务端错误）" : "",
         };
     }

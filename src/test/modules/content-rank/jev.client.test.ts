@@ -1,5 +1,9 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { JevClient, JevHttpError } from "../../../providers/system-one/jev.client.ts";
+import {
+  isRetryableStatus,
+  JevClient,
+  JevHttpError,
+} from "../../../providers/system-one/jev.client.ts";
 
 interface Call {
   url: string;
@@ -157,19 +161,65 @@ Deno.test("jev client - retry-after 过大：立即失败，不拖垮 5 分钟�
   assertEquals(error.retryable, false);
 });
 
-Deno.test("jev client - 网络异常/超时：按可重试处理", async () => {
-  const stub = makeStub((_call, index) => {
-    if (index < 2) {
-      const abort = new Error("aborted");
-      abort.name = "AbortError";
-      return abort as unknown as Response;
-    }
-    return jsonResponse(okBody);
-  });
+Deno.test("jev client - 408/409：服务端声明未处理，允许重试", async () => {
+  for (const status of [408, 409]) {
+    const stub = makeStub((_call, index) =>
+      index === 0 ? jsonResponse({ detail: "retry" }, status) : jsonResponse(okBody)
+    );
+    const client = clientOf(stub);
+    const { attempts } = await client.evaluate({ state: "x", questions: {} });
+    assertEquals(stub.calls.length, 2, `status ${status} 应重试一次`);
+    assertEquals(attempts, 1);
+  }
+});
+
+Deno.test("jev client - 403（实测缺 key 的真实状态码）：一次即止，不重试", async () => {
+  const stub = makeStub(() =>
+    jsonResponse({
+      detail: { error_type: "authentication_error", message: "Must supply an API key!" },
+    }, 403)
+  );
   const client = clientOf(stub);
-  const { attempts } = await client.evaluate({ state: "x", questions: {} });
-  assertEquals(stub.calls.length, 3);
-  assertEquals(attempts, 2);
+  const error = await assertRejects(
+    () => client.evaluate({ state: "x", questions: {} }),
+    JevHttpError,
+  );
+  assertEquals(stub.calls.length, 1);
+  assertEquals(error.status, 403);
+  assertEquals(error.retryable, false);
+});
+
+Deno.test("jev client - 网络层失败与超时：不重试（避免付费调用重复计费）", async () => {
+  // 连接重置类异常
+  const reset = new Error("ECONNRESET");
+  const stubA = makeStub(() => reset as unknown as Response);
+  const errorA = await assertRejects(
+    () => clientOf(stubA).evaluate({ state: "x", questions: {} }),
+    JevHttpError,
+  );
+  assertEquals(stubA.calls.length, 1);
+  assertEquals(errorA.retryable, false);
+  assertEquals(stubA.sleeps.length, 0);
+
+  // 超时（AbortError）
+  const abort = new Error("aborted");
+  abort.name = "AbortError";
+  const stubB = makeStub(() => abort as unknown as Response);
+  const errorB = await assertRejects(
+    () => clientOf(stubB).evaluate({ state: "x", questions: {} }),
+    JevHttpError,
+  );
+  assertEquals(stubB.calls.length, 1);
+  assertEquals(errorB.retryable, false);
+});
+
+Deno.test("jev client - 重试白名单：只有 408/409/429/5xx 可重试", () => {
+  for (const status of [408, 409, 429, 500, 502, 503, 504, 599]) {
+    assertEquals(isRetryableStatus(status), true, `status ${status} 应可重试`);
+  }
+  for (const status of [400, 401, 402, 403, 404, 422, 0, 200]) {
+    assertEquals(isRetryableStatus(status), false, `status ${status} 不应重试`);
+  }
 });
 
 Deno.test("jev client - 响应不是 JSON 或缺 answers：非重试失败，一次即止", async () => {
